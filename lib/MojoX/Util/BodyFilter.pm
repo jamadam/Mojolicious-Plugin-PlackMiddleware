@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use Mojo::Server::PSGI;
 use Plack::Builder;
+our $VERSION = '0.01';
 
     sub set_mw {
         
@@ -16,10 +17,12 @@ use Plack::Builder;
                 eval {
                     require File::Spec->catdir(split(/::/, $e)). '.pm';
                 };
-                if (ref $$mws[0] eq 'ARRAY') {
-                    $plack_app = $e->wrap($plack_app, @{shift @$mws});
-                } else {
-                    $plack_app = $e->wrap($plack_app);
+                if (! $@) {
+                    if (ref $$mws[0] eq 'ARRAY') {
+                        $plack_app = $e->wrap($plack_app, @{shift @$mws});
+                    } else {
+                        $plack_app = $e->wrap($plack_app);
+                    }
                 }
             }
             $res = $plack_app->();
@@ -61,7 +64,7 @@ MojoX::Util::BodyFilter - BodyFilter in Plack::Middleware style [EXPERIMENTAL]
         use MojoX::Util::BodyFilter;
         MojoX::Util::BodyFilter->set_mw($self, [
             'Plack::Middleware::Some',
-            'Plack::Middleware::Some2', \@args,
+            'Plack::Middleware::Some2' => \@args,
         ]);
     }
     
@@ -97,9 +100,18 @@ filters on after_dispatch hook.
 
 =head1 METHODS
 
-=head2 set_mw
+=head2 MojoX::Util::BodyFilter->set_mw($mojo_app, $args_array_ref)
 
-    MojoX::Util::BodyFilter->set_mw($self, ['some::mw1','some::mw2'])
+Sets Plack::Middleware::* to after_dispatch hook of mojo app as a callback.
+
+    MojoX::Util::BodyFilter->set_mw($mojo_app, ['some::mw1','some::mw2'])
+
+Middleware arguments can be set in array refs following to package name.
+
+    MojoX::Util::BodyFilter->set_mw($mojo_app, [
+        'some::mw1' => [$args1, $args2],
+        'some::mw2' => [$args1, $args2],
+    ])
 
 =head1 SEE ALSO
 
