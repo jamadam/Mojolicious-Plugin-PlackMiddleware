@@ -2,7 +2,8 @@ package MojoX::Util::BodyFilter;
 use strict;
 use warnings;
 use Mojo::Server::PSGI;
-	
+use Plack::Builder;
+
 	sub set_mw {
 		
 		my $class = shift;
@@ -10,17 +11,19 @@ use Mojo::Server::PSGI;
 		$app->hook(after_dispatch => sub {
 			my $self = shift;
 			my $res = _generate_psgi_res($self->res);
-			for my $e (@$mws) {
+			my $plack_app = sub {$res};
+			while (my $e = shift @$mws) {
 				eval {
 					require File::Spec->catdir(split(/::/, $e)). '.pm';
 				};
-				if (! $@) {
-					my $mw = $e->new;
-					$mw->app(sub {$res});
-					$res = $mw->call;
+				if (ref $$mws[0] eq 'ARRAY') {
+					$plack_app = $e->wrap($plack_app, @{shift @$mws});
+				} else {
+					$plack_app = $e->wrap($plack_app);
 				}
 			}
-			$self->res->body(join '', $res->[2]->getline);
+			$res = $plack_app->();
+			$self->res->body($res->[2]->getline);
 		});
 	}
 	
@@ -56,7 +59,10 @@ MojoX::Util::BodyFilter - BodyFilter in Plack::Middleware style [EXPERIMENTAL]
         ....
 
         use MojoX::Util::BodyFilter;
-		MojoX::Util::BodyFilter->set_mw($self, ['Some::MW1','Some::MW2'])
+		MojoX::Util::BodyFilter->set_mw($self, [
+			'Plack::Middleware::Some',
+			'Plack::Middleware::Some2', \@args,
+		]);
     }
 	
 	package Some::MW1;

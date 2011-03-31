@@ -8,7 +8,10 @@ MojoX::Util::BodyFilter - BodyFilter in Plack::Middleware style [EXPERIMENTAL]
         ....
 
         use MojoX::Util::BodyFilter;
-		MojoX::Util::BodyFilter->set_mw($self, ['Some::MW1','Some::MW2'])
+		MojoX::Util::BodyFilter->set_mw($self, [
+			'Plack::Middleware::Some',
+			'Plack::Middleware::Some2', \@args,
+		]);
     }
 	
 	package Some::MW1;
