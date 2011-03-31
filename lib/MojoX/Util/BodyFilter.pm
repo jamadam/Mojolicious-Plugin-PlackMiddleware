@@ -3,12 +3,16 @@ use strict;
 use warnings;
 use Mojo::Server::PSGI;
 use Plack::Builder;
+use base qw(Exporter);
+our @EXPORT_OK = qw(enable);
 our $VERSION = '0.01';
 
-    sub set_mw {
+no warnings 'redefine';
+
+    sub enable {
         
-        my $class = shift;
         my ($app, $mws) = @_;
+        
         $app->hook(after_dispatch => sub {
             my $self = shift;
             my $res = _generate_psgi_res($self->res);
@@ -61,8 +65,8 @@ MojoX::Util::BodyFilter - BodyFilter in Plack::Middleware style [EXPERIMENTAL]
     sub startup {
         ....
 
-        use MojoX::Util::BodyFilter;
-        MojoX::Util::BodyFilter->set_mw($self, [
+        use MojoX::Util::BodyFilter 'enable';
+        enable($self, [
             'Plack::Middleware::Some',
             'Plack::Middleware::Some2' => \@args,
         ]);
@@ -100,15 +104,15 @@ filters on after_dispatch hook.
 
 =head1 METHODS
 
-=head2 MojoX::Util::BodyFilter->set_mw($mojo_app, $args_array_ref)
+=head2 MojoX::Util::BodyFilter::enable($mojo_app, $args_array_ref)
 
 Sets Plack::Middleware::* to after_dispatch hook of mojo app as a callback.
 
-    MojoX::Util::BodyFilter->set_mw($mojo_app, ['some::mw1','some::mw2'])
+    MojoX::Util::BodyFilter->enable($mojo_app, ['some::mw1','some::mw2'])
 
 Middleware arguments can be set in array refs following to package name.
 
-    MojoX::Util::BodyFilter->set_mw($mojo_app, [
+    MojoX::Util::BodyFilter->enable($mojo_app, [
         'some::mw1' => [$args1, $args2],
         'some::mw2' => [$args1, $args2],
     ])
