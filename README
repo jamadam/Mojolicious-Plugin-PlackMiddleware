@@ -1,18 +1,65 @@
-MojoX-Util-BodyFilter
+=head1 NAME
 
-INSTALLATION
+MojoX::Util::BodyFilter - BodyFilter in Plack::Middleware style [EXPERIMENTAL]
 
-To install this module, run the following commands:
+=head1 SYNOPSIS
 
-    perl Makefile.PL
-    make
-    make test
-    make install
+    sub startup {
+        ....
 
-COPYRIGHT AND LICENSE
+        use MojoX::Util::BodyFilter;
+		MojoX::Util::BodyFilter->set_mw($self, ['Some::MW1','Some::MW2'])
+    }
+	
+	package Some::MW1;
+	use strict;
+	use warnings;
+	use base qw( Plack::Middleware );
+	
+	sub call {
+		
+		my $self = shift;
+		my $res = $self->app->(@_);
+		$self->response_cb($res, sub {
+			my $res = shift;
+			my $h = Plack::Util::headers($res->[1]);
+			if ($h->get('Content-Type') =~ 'text/html') {
+				return sub {
+					my $chunk = shift;
+					
+					### DO SOMETHING
+					
+					return $chunk;
+				};
+			}
+			$res;
+		});
+	}
 
-Copyright (C) 2011 Sugama Keita
+=head1 DESCRIPTION
+
+MojoX::Util::BodyFilter allows you to activate Plack::Middleware style body
+filters on after_dispatch hook.
+
+=head1 METHODS
+
+=head2 set_mw
+
+	MojoX::Util::BodyFilter->set_mw($self, ['some::mw1','some::mw2'])
+
+=head1 SEE ALSO
+
+L<Text::PSTemplate>, L<MojoX::Renderer>
+
+=head1 AUTHOR
+
+Sugama Keita, E<lt>sugama@jamadam.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2011 by Sugama Keita.
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
+=cut
