@@ -14,23 +14,24 @@ no warnings 'redefine';
         my ($app, $mws) = @_;
         
         $app->hook(after_dispatch => sub {
-            my $self = shift;
-            my $res = _generate_psgi_res($self->res);
+            my $controller = shift;
+            my @mws = @$mws;
+            my $res = _generate_psgi_res($controller->res);
             my $plack_app = sub {$res};
-            while (my $e = shift @$mws) {
+            while (my $e = shift @mws) {
                 eval {
                     require File::Spec->catdir(split(/::/, $e)). '.pm';
                 };
                 if (! $@) {
-                    if (ref $$mws[0] eq 'ARRAY') {
-                        $plack_app = $e->wrap($plack_app, @{shift @$mws});
+                    if (ref $mws[0] eq 'ARRAY') {
+                        $plack_app = $e->wrap($plack_app, @{shift @mws});
                     } else {
                         $plack_app = $e->wrap($plack_app);
                     }
                 }
             }
             $res = $plack_app->();
-            $self->res->body($res->[2]->getline);
+            $controller->res->body($res->[2]->getline);
         });
     }
     
