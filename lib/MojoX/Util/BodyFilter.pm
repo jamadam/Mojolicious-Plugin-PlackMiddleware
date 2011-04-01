@@ -118,10 +118,6 @@ Middleware arguments can be set in array refs following to package name.
         'some::mw2' => [$args1, $args2],
     ])
 
-=head1 SEE ALSO
-
-L<Text::PSTemplate>, L<MojoX::Renderer>
-
 =head1 AUTHOR
 
 Sugama Keita, E<lt>sugama@jamadam.comE<gt>
