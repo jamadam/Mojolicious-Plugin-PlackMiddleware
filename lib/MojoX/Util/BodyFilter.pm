@@ -73,7 +73,7 @@ MojoX::Util::BodyFilter - BodyFilter in Plack::Middleware style [EXPERIMENTAL]
         ]);
     }
     
-    package Some::MW1;
+    package Plack::Middleware::Some;
     use strict;
     use warnings;
     use base qw( Plack::Middleware );
