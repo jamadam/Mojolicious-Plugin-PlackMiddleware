@@ -5,7 +5,7 @@ use Mojo::Server::PSGI;
 use Plack::Builder;
 use base qw(Exporter);
 our @EXPORT_OK = qw(enable);
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 no warnings 'redefine';
 
@@ -40,7 +40,7 @@ no warnings 'redefine';
         my $res = shift;
         
         my $status = $res->code;
-        $res->fix_headers;
+        #$res->fix_headers;
         my $headers = $res->content->headers;
         my @headers;
         for my $name (@{$headers->names}) {
