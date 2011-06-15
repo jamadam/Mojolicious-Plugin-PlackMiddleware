@@ -1,4 +1,4 @@
-package TestFilter;
+package GrowLargeFilter;
 use strict;
 use warnings;
 use base qw( Plack::Middleware );
@@ -10,7 +10,7 @@ sub call {
 	$self->response_cb($res, sub {
 		return sub {
 			my $chunk = shift;
-			return $chunk. '[filtered]';
+			return $chunk. ("1234567890" x 10000);
 		};
 		$res;
 	});

@@ -8,17 +8,10 @@ sub call {
 	my $self = shift;
 	my $res = $self->app->(@_);
 	$self->response_cb($res, sub {
-		my $res = shift;
-		my $h = Plack::Util::headers($res->[1]);
-		if ($h->get('Content-Type') =~ 'text/html') {
-			return sub {
-				my $chunk = shift;
-				
-				$chunk .= "[$self->{tag}]";
-				
-				return $chunk;
-			};
-		}
+		return sub {
+			my $chunk = shift;
+			return $chunk. "[$self->{tag}]";
+		};
 		$res;
 	});
 }
