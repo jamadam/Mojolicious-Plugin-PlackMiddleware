@@ -5,3 +5,7 @@ Revision history for MojoX-Util-BodyFilter
 
 0.02 2011/04/30
   - Disabled $res->fix_headers which sometimes causes the responce slow.
+
+0.04 2011/06/15
+  - Tested
+  - Now it dies if loading middleware failed

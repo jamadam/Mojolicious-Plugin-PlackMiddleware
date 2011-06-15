@@ -5,7 +5,7 @@ use Mojo::Server::PSGI;
 use Plack::Builder;
 use base qw(Exporter);
 our @EXPORT_OK = qw(enable);
-our $VERSION = '0.02';
+our $VERSION = '0.04';
 
 no warnings 'redefine';
 
@@ -19,15 +19,11 @@ no warnings 'redefine';
             my $res = _generate_psgi_res($controller->res);
             my $plack_app = sub {$res};
             while (my $e = shift @mws) {
-                eval {
-                    require File::Spec->catdir(split(/::/, $e)). '.pm';
-                };
-                if (! $@) {
-                    if (ref $mws[0] eq 'ARRAY') {
-                        $plack_app = $e->wrap($plack_app, @{shift @mws});
-                    } else {
-                        $plack_app = $e->wrap($plack_app);
-                    }
+                require File::Spec->catdir(split(/::/, $e)). '.pm';
+                if (ref $mws[0] eq 'ARRAY') {
+                    $plack_app = $e->wrap($plack_app, @{shift @mws});
+                } else {
+                    $plack_app = $e->wrap($plack_app);
                 }
             }
             $res = $plack_app->();
