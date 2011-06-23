@@ -4,32 +4,50 @@ use warnings;
 use Mojo::Server::PSGI;
 use Mojo::Message::Response;
 use Plack::Builder;
+use Carp;
 use base qw(Exporter);
-our @EXPORT_OK = qw(enable);
+our @EXPORT_OK = qw(enable enable_if);
 our $VERSION = '0.06';
 
 use Data::Dumper;
-no warnings 'redefine';
-
+no warnings qw{redefine prototype};
+    
+    sub _create_hook {
+        my ($app, $mws, $condition) = @_;
+        return sub {
+            my $c = shift;
+            if (! $condition || $condition->($c)) {
+                my @mws = @$mws;
+                my $res = _generate_psgi_res($c->res);
+                my $plack_app = sub {$res};
+                while (my $e = shift @mws) {
+                    require File::Spec->catdir(split(/::/, $e)). '.pm';
+                    if (ref $mws[0] eq 'ARRAY') {
+                        $plack_app = $e->wrap($plack_app, @{shift @mws});
+                    } else {
+                        $plack_app = $e->wrap($plack_app);
+                    }
+                }
+                $c->tx->res(_generate_mojo_res($plack_app->()));
+            }
+        }
+    }
+    
+    sub enable_if {
+        
+        my ($app, $condition, $mws) = @_;
+        if (ref $condition ne 'CODE') {
+            die '2nd argument must be a code reference';
+        }
+        $app->hook(after_dispatch => _create_hook($app, $mws, $condition));
+    }
+    
     sub enable {
         
         my ($app, $mws) = @_;
         
-        $app->hook(after_dispatch => sub {
-            my $c = shift;
-            my @mws = @$mws;
-            my $res = _generate_psgi_res($c->res);
-            my $plack_app = sub {$res};
-            while (my $e = shift @mws) {
-                require File::Spec->catdir(split(/::/, $e)). '.pm';
-                if (ref $mws[0] eq 'ARRAY') {
-                    $plack_app = $e->wrap($plack_app, @{shift @mws});
-                } else {
-                    $plack_app = $e->wrap($plack_app);
-                }
-            }
-            $c->tx->res(_generate_mojo_res($plack_app->()));
-        });
+        $app->hook(after_dispatch => _create_hook($app, $mws));
+        return;
     }
     
     sub _generate_mojo_res {
@@ -139,6 +157,27 @@ Middleware arguments can be set in array refs following to package name.
         'some::mw1' => [$args1, $args2],
         'some::mw2' => [$args1, $args2],
     ])
+
+enable_if is also available
+
+    enable_if($self,
+        sub {
+            my $mojo_controller = shift;
+            if (...) {
+                return 1;
+            }
+        }, [
+            'TestFilter',
+        ]
+    );
+
+=head1 METHOD
+
+=head2 enable($mojo_app, $middlewares)
+
+=head2 enable_if($mojo_app, $condition, $middlewares)
+
+if $condition is true, $middleware would be activate.
 
 =head1 AUTHOR
 

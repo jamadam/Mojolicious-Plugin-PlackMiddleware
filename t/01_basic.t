@@ -55,6 +55,69 @@ use utf8;
 			->header_is('Content-Type', 'text/html;charset=Shift_JIS')
 			->content_is('日本語');
 	}
+	
+	sub enable_if_false : Test(4) {
+        $ENV{MOJO_MODE} = 'production';
+        my $t = Test::Mojo->new(app => 'EnableIfFalse');
+        $t->get_ok('/index')
+			->status_is(200)
+			->header_is('Content-length', 8)
+			->content_is('original');
+	}
+		{
+			package EnableIfFalse;
+			use strict;
+			use warnings;
+			use base 'Mojolicious';
+			use MojoX::Util::ResponseFilter qw(enable enable_if);
+			use lib 't/lib';
+			
+			sub startup {
+				my $self = shift;
+				
+				enable_if($self, sub {0}, [
+					'TestFilter',
+				]);
+				
+				$self->routes->route('/index')->to(cb => sub{
+					$_[0]->render_text('original');
+				});
+			}
+		}
+	
+	sub enable_if_true : Test(5) {
+        $ENV{MOJO_MODE} = 'production';
+        my $t = Test::Mojo->new(app => 'EnableIfTrue');
+        $t->get_ok('/index')
+			->status_is(200)
+			->header_is('Content-length', 18)
+			->content_is('original[filtered]');
+	}
+		{
+			package EnableIfTrue;
+			use strict;
+			use warnings;
+			use base 'Mojolicious';
+			use MojoX::Util::ResponseFilter qw(enable enable_if);
+			use lib 't/lib';
+			use Scalar::Util;
+			use Test::More;
+			
+			sub startup {
+				my $self = shift;
+				
+				enable_if($self, sub {
+						ok($_[0]->isa('Mojolicious::Controller'), 'cb gets controller');
+						1;
+					}, [
+					'TestFilter',
+				]);
+				
+				$self->routes->route('/index')->to(cb => sub{
+					$_[0]->render_text('original');
+				});
+			}
+		}
     
     END {
         $ENV{MOJO_MODE} = $backup;

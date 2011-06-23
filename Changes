@@ -13,3 +13,4 @@ Revision history for MojoX-Util-ResponseFilter
 0.05 2011/06/23
   - Got capable of filtering headers
   - Distribution renamed
+  - enable_if added
