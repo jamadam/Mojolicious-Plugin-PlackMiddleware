@@ -7,7 +7,7 @@ use Plack::Builder;
 use Carp;
 use base qw(Exporter);
 our @EXPORT_OK = qw(enable enable_if);
-our $VERSION = '0.07';
+our $VERSION = '0.06';
 
 use Data::Dumper;
 no warnings qw{redefine prototype};
