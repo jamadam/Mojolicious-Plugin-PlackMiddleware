@@ -6,7 +6,7 @@ use Mojo::Message::Response;
 use Plack::Builder;
 use base qw(Exporter);
 our @EXPORT_OK = qw(enable);
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 use Data::Dumper;
 no warnings 'redefine';
@@ -16,9 +16,9 @@ no warnings 'redefine';
         my ($app, $mws) = @_;
         
         $app->hook(after_dispatch => sub {
-            my $controller = shift;
+            my $c = shift;
             my @mws = @$mws;
-            my $res = _generate_psgi_res($controller->res);
+            my $res = _generate_psgi_res($c->res);
             my $plack_app = sub {$res};
             while (my $e = shift @mws) {
                 require File::Spec->catdir(split(/::/, $e)). '.pm';
@@ -28,7 +28,7 @@ no warnings 'redefine';
                     $plack_app = $e->wrap($plack_app);
                 }
             }
-            $controller->tx->res(_generate_mojo_res($plack_app->()));
+            $c->tx->res(_generate_mojo_res($plack_app->()));
         });
     }
     
