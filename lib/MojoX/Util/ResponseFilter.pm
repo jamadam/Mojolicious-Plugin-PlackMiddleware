@@ -106,7 +106,7 @@ MojoX::Util::ResponseFilter - ResponseFilter in Plack::Middleware style [EXPERIM
     sub startup {
         ....
 
-        use MojoX::Util::ResponseFilter 'enable';
+        use MojoX::Util::ResponseFilter 'enable enable_if';
         enable($self, [
             'Plack::Middleware::Some',
             'Plack::Middleware::Some2' => \@args,
@@ -128,20 +128,12 @@ MojoX::Util::ResponseFilter - ResponseFilter in Plack::Middleware style [EXPERIM
     
     sub call {
         
-        my $self = shift;
-        my $res = $self->app->(@_);
-        $self->response_cb($res, sub {
+        my ($self, $env) = @_;
+        $self->response_cb($self->app->($env), sub {
             my $res = shift;
-            my $h = Plack::Util::headers($res->[1]);
-            if ($h->get('Content-Type') =~ 'text/html') {
-                return sub {
-                    my $chunk = shift;
-                    
-                    ### DO SOMETHING
-                    
-                    return $chunk;
-                };
-            }
+            
+            ### DO SOMETHING
+            
             $res;
         });
     }
