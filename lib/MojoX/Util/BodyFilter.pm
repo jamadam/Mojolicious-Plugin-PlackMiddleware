@@ -2,11 +2,13 @@ package MojoX::Util::BodyFilter;
 use strict;
 use warnings;
 use Mojo::Server::PSGI;
+use Mojo::Message::Response;
 use Plack::Builder;
 use base qw(Exporter);
 our @EXPORT_OK = qw(enable);
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
+use Data::Dumper;
 no warnings 'redefine';
 
     sub enable {
@@ -26,9 +28,34 @@ no warnings 'redefine';
                     $plack_app = $e->wrap($plack_app);
                 }
             }
-            $res = $plack_app->();
-            $controller->res->body($res->[2]->getline);
+            $controller->tx->res(_generate_mojo_res($plack_app->()));
         });
+    }
+    
+    sub _generate_mojo_res {
+        my $res = shift;
+        my $mojo_res = Mojo::Message::Response->new;
+        $mojo_res->code($res->[0]);
+        my $headers = $mojo_res->headers;
+        while (scalar @{$res->[1]}) {
+            my $key = shift @{$res->[1]};
+            my $value = shift @{$res->[1]};
+            $headers->header($key => $value);
+        }
+        
+        # Content-Length should be set by mojolicious
+        $headers->header('Content-Length' => 0);
+        
+        if (ref $res->[2] eq 'ARRAY') {
+            my $body = '';
+            while (my $chunk = shift @{$res->[2]}) {
+                $body .= $chunk;
+            }
+            $mojo_res->body($body);
+        } else {
+            $mojo_res->body($res->[2]->{getline}->());
+        }
+        return $mojo_res;
     }
     
     sub _generate_psgi_res {
@@ -36,7 +63,6 @@ no warnings 'redefine';
         my $res = shift;
         
         my $status = $res->code;
-        #$res->fix_headers;
         my $headers = $res->content->headers;
         my @headers;
         for my $name (@{$headers->names}) {

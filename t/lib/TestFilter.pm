@@ -9,8 +9,9 @@ sub call {
 	my $res = $self->app->(@_);
 	$self->response_cb($res, sub {
 		return sub {
-			my $chunk = shift;
-			return $chunk. '[filtered]';
+			if (my $chunk = shift) {
+				return $chunk. '[filtered]';
+			}
 		};
 		$res;
 	});

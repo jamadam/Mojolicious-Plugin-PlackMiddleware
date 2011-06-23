@@ -9,3 +9,7 @@ Revision history for MojoX-Util-BodyFilter
 0.04 2011/06/15
   - Tested
   - Now it dies if loading middleware failed
+
+0.05 2011/06/23
+  - Got capable of filtering headers
+  - Distribution renamed
