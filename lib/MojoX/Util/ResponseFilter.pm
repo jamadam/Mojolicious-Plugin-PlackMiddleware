@@ -106,7 +106,7 @@ MojoX::Util::ResponseFilter - ResponseFilter in Plack::Middleware style [EXPERIM
     sub startup {
         ....
 
-        use MojoX::Util::ResponseFilter 'enable enable_if';
+        use MojoX::Util::ResponseFilter qw(enable enable_if);
         enable($self, [
             'Plack::Middleware::Some',
             'Plack::Middleware::Some2' => \@args,
