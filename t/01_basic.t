@@ -4,7 +4,7 @@ use warnings;
 use base 'Test::Class';
 use Test::More;
 use Test::Mojo;
-use MojoX::Util::BodyFilter;
+use MojoX::Util::ResponseFilter;
 use utf8;
 
     my $backup = $ENV{MOJO_MODE} || '';
@@ -64,7 +64,7 @@ package SomeApp;
 use strict;
 use warnings;
 use base 'Mojolicious';
-use MojoX::Util::BodyFilter 'enable';
+use MojoX::Util::ResponseFilter 'enable';
 use lib 't/lib';
 
 sub startup {
@@ -83,7 +83,7 @@ package SomeApp2;
 use strict;
 use warnings;
 use base 'Mojolicious';
-use MojoX::Util::BodyFilter 'enable';
+use MojoX::Util::ResponseFilter 'enable';
 use lib 't/lib';
 
 sub startup {
@@ -103,7 +103,7 @@ package SomeApp3;
 use strict;
 use warnings;
 use base 'Mojolicious';
-use MojoX::Util::BodyFilter 'enable';
+use MojoX::Util::ResponseFilter 'enable';
 use lib 't/lib';
 
 sub startup {
@@ -122,7 +122,7 @@ package GrowLarge;
 use strict;
 use warnings;
 use base 'Mojolicious';
-use MojoX::Util::BodyFilter 'enable';
+use MojoX::Util::ResponseFilter 'enable';
 use lib 't/lib';
 
 sub startup {
@@ -141,7 +141,7 @@ package HeadModified;
 use strict;
 use warnings;
 use base 'Mojolicious';
-use MojoX::Util::BodyFilter 'enable';
+use MojoX::Util::ResponseFilter 'enable';
 use lib 't/lib';
 
 sub startup {

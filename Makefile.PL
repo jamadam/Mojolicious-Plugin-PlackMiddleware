@@ -3,10 +3,10 @@ use warnings;
 use ExtUtils::MakeMaker;
 
 my %params = (
-    NAME          => 'MojoX::Util::BodyFilter',
+    NAME          => 'MojoX::Util::ResponseFilter',
     AUTHOR        => 'Sugama Keita <sugama@jamadam.com>',
-    VERSION_FROM  => 'lib/MojoX/Util/BodyFilter.pm',
-    ABSTRACT_FROM => 'lib/MojoX/Util/BodyFilter.pm',
+    VERSION_FROM  => 'lib/MojoX/Util/ResponseFilter.pm',
+    ABSTRACT_FROM => 'lib/MojoX/Util/ResponseFilter.pm',
     LICENSE       => 'perl',
     PREREQ_PM     => {
     },

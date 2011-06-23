@@ -1,4 +1,4 @@
-package MojoX::Util::BodyFilter;
+package MojoX::Util::ResponseFilter;
 use strict;
 use warnings;
 use Mojo::Server::PSGI;
@@ -81,14 +81,14 @@ __END__
 
 =head1 NAME
 
-MojoX::Util::BodyFilter - BodyFilter in Plack::Middleware style [EXPERIMENTAL]
+MojoX::Util::ResponseFilter - ResponseFilter in Plack::Middleware style [EXPERIMENTAL]
 
 =head1 SYNOPSIS
 
     sub startup {
         ....
 
-        use MojoX::Util::BodyFilter 'enable';
+        use MojoX::Util::ResponseFilter 'enable';
         enable($self, [
             'Plack::Middleware::Some',
             'Plack::Middleware::Some2' => \@args,
@@ -122,20 +122,20 @@ MojoX::Util::BodyFilter - BodyFilter in Plack::Middleware style [EXPERIMENTAL]
 
 =head1 DESCRIPTION
 
-MojoX::Util::BodyFilter allows you to activate Plack::Middleware style body
+MojoX::Util::ResponseFilter allows you to activate Plack::Middleware style body
 filters on after_dispatch hook.
 
 =head1 METHODS
 
-=head2 MojoX::Util::BodyFilter::enable($mojo_app, $args_array_ref)
+=head2 MojoX::Util::ResponseFilter::enable($mojo_app, $args_array_ref)
 
 Sets Plack::Middleware::* to after_dispatch hook of mojo app as a callback.
 
-    MojoX::Util::BodyFilter->enable($mojo_app, ['some::mw1','some::mw2'])
+    MojoX::Util::ResponseFilter->enable($mojo_app, ['some::mw1','some::mw2'])
 
 Middleware arguments can be set in array refs following to package name.
 
-    MojoX::Util::BodyFilter->enable($mojo_app, [
+    MojoX::Util::ResponseFilter->enable($mojo_app, [
         'some::mw1' => [$args1, $args2],
         'some::mw2' => [$args1, $args2],
     ])
