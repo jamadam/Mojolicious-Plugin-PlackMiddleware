@@ -111,6 +111,14 @@ MojoX::Util::ResponseFilter - ResponseFilter in Plack::Middleware style [EXPERIM
             'Plack::Middleware::Some',
             'Plack::Middleware::Some2' => \@args,
         ]);
+        
+        enable_if($self,
+            sub {...}, [
+                'Plack::Middleware::Some',
+                'Plack::Middleware::Some2' => \@args,
+            ]
+        );
+        
     }
     
     package Plack::Middleware::Some;
@@ -157,6 +165,8 @@ Middleware arguments can be set in array refs following to package name.
         'some::mw1' => [$args1, $args2],
         'some::mw2' => [$args1, $args2],
     ])
+
+=head2 MojoX::Util::ResponseFilter::enable_if($mojo_app, $cb, $args_array_ref)
 
 enable_if is also available
 
