@@ -56,20 +56,14 @@ no warnings qw{redefine prototype};
         $mojo_res->code($res->[0]);
         my $headers = $mojo_res->headers;
         while (scalar @{$res->[1]}) {
-            my $key = shift @{$res->[1]};
-            my $value = shift @{$res->[1]};
-            $headers->header($key => $value);
+            $headers->header(shift @{$res->[1]} => shift @{$res->[1]});
         }
         
         # Content-Length should be set by mojolicious
         $headers->header('Content-Length' => 0);
         
         if (ref $res->[2] eq 'ARRAY') {
-            my $body = '';
-            while (my $chunk = shift @{$res->[2]}) {
-                $body .= $chunk;
-            }
-            $mojo_res->body($body);
+            $mojo_res->body(join '', @{$res->[2]});
         } else {
             $mojo_res->body($res->[2]->{getline}->());
         }
