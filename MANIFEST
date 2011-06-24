@@ -1,7 +1,7 @@
 Changes
-lib/MojoX/Util/ResponseFilter.pm
+lib/Mojolicious/Plugin/PlackMiddleware.pm
 Makefile.PL
-MANIFEST			This list of files
+MANIFEST
 README.pod
 t/00_load.t
 t/01_basic.t
@@ -12,3 +12,4 @@ t/lib/GrowLargeFilter.pm
 t/lib/TestFilter.pm
 t/lib/TestFilter2.pm
 t/lib/TestFilter3.pm
+t/public/css.css
