@@ -5,12 +5,8 @@ use Mojo::Server::PSGI;
 use Mojo::Message::Response;
 use Plack::Builder;
 use Carp;
-use Scalar::Util qw{blessed};
 use Mojo::Base 'Mojolicious::Plugin';
-our $VERSION = '0.07';
-
-use Data::Dumper;
-no warnings qw{redefine prototype};
+our $VERSION = '0.08';
 
     sub register {
         my ($self, $app, $mws) = @_;
@@ -68,8 +64,7 @@ no warnings qw{redefine prototype};
             }
         }
         
-        my $body =
-            Mojo::Server::PSGI::_Handle->new(_res => $mojo_res);
+        my $body = Mojo::Server::PSGI::_Handle->new(_res => $mojo_res);
         return [$status, \@headers, $body];
     }
 

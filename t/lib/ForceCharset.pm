@@ -32,6 +32,7 @@ sub call {
 		});
 		$res->[2] = $fixed_body;
 		$h->set('Content-Length', length $fixed_body);
+		return $res;
 	});
 }
 
