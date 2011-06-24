@@ -9,8 +9,9 @@ sub call {
 	my $res = $self->app->(@_);
 	$self->response_cb($res, sub {
 		return sub {
-			my $chunk = shift;
-			return $chunk. ("1234567890" x 10000);
+			if (my $chunk = shift) {
+				return $chunk. ("1234567890" x 10000);
+			}
 		};
 		$res;
 	});

@@ -41,12 +41,17 @@ our $VERSION = '0.08';
         }
         
         # Content-Length should be set by mojolicious
-        $headers->header('Content-Length' => 0);
+        $headers->remove('Content-Length');
         
+        my $asset = $mojo_res->content->asset;
         if (ref $psgi_res->[2] eq 'ARRAY') {
-            $mojo_res->body(join '', @{$psgi_res->[2]});
+            for my $chunk (@{$psgi_res->[2]}) {
+                $asset->add_chunk($chunk);
+            }
         } else {
-            $mojo_res->body($psgi_res->[2]->getline);
+            while (my $chunk = $psgi_res->[2]->getline) {
+                $asset->add_chunk($chunk);
+            }
         }
         return $mojo_res;
     }
@@ -63,9 +68,13 @@ our $VERSION = '0.08';
                 push @headers, $name => $_ for @$values;
             }
         }
-        
-        my $body = Mojo::Server::PSGI::_Handle->new(_res => $mojo_res);
-        return [$status, \@headers, $body];
+        my @body;
+        my $offset = 0;
+        while (my $chunk = $mojo_res->get_body_chunk($offset)) {
+            push(@body, $chunk);
+            $offset += length $chunk;
+        }
+        return [$status, \@headers, \@body];
     }
 
 1;
