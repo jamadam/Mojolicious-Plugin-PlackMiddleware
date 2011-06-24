@@ -12,6 +12,23 @@ our $VERSION = '0.07';
 use Data::Dumper;
 no warnings qw{redefine prototype};
     
+    sub enable_if {
+        
+        my ($app, $condition, $mws) = @_;
+        if (ref $condition ne 'CODE') {
+            die '2nd argument must be a code reference';
+        }
+        $app->hook(after_dispatch => _create_hook($app, $mws, $condition));
+    }
+    
+    sub enable {
+        
+        my ($app, $mws) = @_;
+        
+        $app->hook(after_dispatch => _create_hook($app, $mws));
+        return;
+    }
+    
     sub _create_hook {
         my ($app, $mws, $condition) = @_;
         return sub {
@@ -33,49 +50,32 @@ no warnings qw{redefine prototype};
         }
     }
     
-    sub enable_if {
-        
-        my ($app, $condition, $mws) = @_;
-        if (ref $condition ne 'CODE') {
-            die '2nd argument must be a code reference';
-        }
-        $app->hook(after_dispatch => _create_hook($app, $mws, $condition));
-    }
-    
-    sub enable {
-        
-        my ($app, $mws) = @_;
-        
-        $app->hook(after_dispatch => _create_hook($app, $mws));
-        return;
-    }
-    
     sub _generate_mojo_res {
-        my $res = shift;
+        my $psgi_res = shift;
         my $mojo_res = Mojo::Message::Response->new;
-        $mojo_res->code($res->[0]);
+        $mojo_res->code($psgi_res->[0]);
         my $headers = $mojo_res->headers;
-        while (scalar @{$res->[1]}) {
-            $headers->header(shift @{$res->[1]} => shift @{$res->[1]});
+        while (scalar @{$psgi_res->[1]}) {
+            $headers->header(shift @{$psgi_res->[1]} => shift @{$psgi_res->[1]});
         }
         
         # Content-Length should be set by mojolicious
         $headers->header('Content-Length' => 0);
         
-        if (ref $res->[2] eq 'ARRAY') {
-            $mojo_res->body(join '', @{$res->[2]});
+        if (ref $psgi_res->[2] eq 'ARRAY') {
+            $mojo_res->body(join '', @{$psgi_res->[2]});
         } else {
-            $mojo_res->body($res->[2]->{getline}->());
+            $mojo_res->body($psgi_res->[2]->{getline}->());
         }
         return $mojo_res;
     }
     
     sub _generate_psgi_res {
         
-        my $res = shift;
+        my $mojo_res = shift;
         
-        my $status = $res->code;
-        my $headers = $res->content->headers;
+        my $status = $mojo_res->code;
+        my $headers = $mojo_res->content->headers;
         my @headers;
         for my $name (@{$headers->names}) {
             for my $values ($headers->header($name)) {
@@ -83,7 +83,7 @@ no warnings qw{redefine prototype};
             }
         }
         
-        my $body = Mojo::Server::PSGI::_Handle->new(_res => $res);
+        my $body = Mojo::Server::PSGI::_Handle->new(_res => $mojo_res);
         return [$status, \@headers, $body];
     }
 
