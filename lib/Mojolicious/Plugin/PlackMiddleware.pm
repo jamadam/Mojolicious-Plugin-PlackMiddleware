@@ -117,8 +117,8 @@ MojoX::Util::PlackMiddleware - ResponseFilter in Plack::Middleware style
 
 =head1 DESCRIPTION
 
-Mojolicious::Plugin::PlackMiddleware allows you to activate Plack::Middleware
-style body filters on after_dispatch hook.
+Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
+inside Mojolicious as after_dispatch hook.
 
 =head1 METHODS
 
