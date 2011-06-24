@@ -3,10 +3,10 @@ use warnings;
 use ExtUtils::MakeMaker;
 
 my %params = (
-    NAME          => 'MojoX::Util::ResponseFilter',
+    NAME          => 'Mojolicious::Plugin::PlackMiddleware',
     AUTHOR        => 'Sugama Keita <sugama@jamadam.com>',
-    VERSION_FROM  => 'lib/MojoX/Util/ResponseFilter.pm',
-    ABSTRACT_FROM => 'lib/MojoX/Util/ResponseFilter.pm',
+    VERSION_FROM  => 'lib/Mojolicious/Plugin/PlackMiddleware.pm',
+    ABSTRACT_FROM => 'lib/Mojolicious/Plugin/PlackMiddleware.pm',
     LICENSE       => 'perl',
     PREREQ_PM     => {
     },

@@ -4,7 +4,6 @@ use warnings;
 use base 'Test::Class';
 use Test::More;
 use Test::Mojo;
-use MojoX::Util::ResponseFilter;
 use utf8;
 
     my $backup = $ENV{MOJO_MODE} || '';
@@ -28,14 +27,13 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use MojoX::Util::ResponseFilter 'enable';
 			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
 				
-				enable($self, [
-					'TestFilter',
+				$self->plugin('plack_middleware', [
+					'TestFilter'
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
@@ -57,13 +55,12 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use MojoX::Util::ResponseFilter 'enable';
 			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
 				
-				enable($self, [
+				$self->plugin('plack_middleware', [
 					'TestFilter',
 					'TestFilter2',
 				]);
@@ -87,14 +84,13 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use MojoX::Util::ResponseFilter 'enable';
 			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
 				
-				enable($self, [
-					'TestFilter3' => [tag => 'aaa'],
+				$self->plugin('plack_middleware', [
+					'TestFilter3' => {tag => 'aaa'},
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
@@ -116,13 +112,12 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use MojoX::Util::ResponseFilter 'enable';
 			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
 				
-				enable($self, [
+				$self->plugin('plack_middleware', [
 					'GrowLargeFilter',
 				]);
 				
@@ -145,14 +140,13 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use MojoX::Util::ResponseFilter 'enable';
 			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
 				
-				enable($self, [
-					'ForceCharset', [charset => 'Shift_JIS']
+				$self->plugin('plack_middleware', [
+					'ForceCharset', {charset => 'Shift_JIS'}
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
@@ -174,14 +168,13 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use MojoX::Util::ResponseFilter qw(enable enable_if);
 			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
 				
-				enable_if($self, sub {0}, [
-					'TestFilter',
+				$self->plugin('plack_middleware', [
+					'TestFilter', sub {0}
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
@@ -203,7 +196,6 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use MojoX::Util::ResponseFilter qw(enable enable_if);
 			use lib 't/lib';
 			use Scalar::Util;
 			use Test::More;
@@ -211,11 +203,12 @@ use utf8;
 			sub startup {
 				my $self = shift;
 				
-				enable_if($self, sub {
-						ok($_[0]->isa('Mojolicious::Controller'), 'cb gets controller');
-						1;
-					}, [
-					'TestFilter',
+				$self->plugin('plack_middleware', [
+					'TestFilter', sub {
+						ok($_[0]->isa('Mojolicious::Controller'), 'cb gets controller'); 1
+					}, {
+						'arg1' => 'a',
+					}
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
