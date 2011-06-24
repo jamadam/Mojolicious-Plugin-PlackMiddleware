@@ -11,13 +11,17 @@ use utf8;
     
     __PACKAGE__->runtests;
     
-    sub single_filter : Test(4) {
+    sub single_filter : Test(8) {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new(app => 'SomeApp');
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 18)
 			->content_is('original[filtered]');
+        $t->get_ok('/css.css')
+			->status_is(200)
+			->header_is('Content-length', 13)
+			->content_is('css[filtered]');
     }
 		{
 			package SomeApp;
