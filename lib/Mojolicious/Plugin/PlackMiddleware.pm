@@ -6,7 +6,7 @@ use Mojo::Message::Response;
 use Plack::Builder;
 use Carp;
 use Mojo::Base 'Mojolicious::Plugin';
-our $VERSION = '0.08';
+our $VERSION = '0.09';
 
     sub register {
         my ($self, $app, $mws) = @_;
