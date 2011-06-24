@@ -1,10 +1,6 @@
 package Mojolicious::Plugin::PlackMiddleware;
 use strict;
 use warnings;
-use Mojo::Server::PSGI;
-use Mojo::Message::Response;
-use Plack::Builder;
-use Carp;
 use Mojo::Base 'Mojolicious::Plugin';
 our $VERSION = '0.09';
 
