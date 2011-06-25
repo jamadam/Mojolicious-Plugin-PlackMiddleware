@@ -79,7 +79,7 @@ __END__
 
 =head1 NAME
 
-MojoX::Util::PlackMiddleware - ResponseFilter in Plack::Middleware style
+MojoX::Util::PlackMiddleware - Response Filter in Plack::Middleware style
 
 =head1 SYNOPSIS
 
