@@ -127,12 +127,13 @@ use utf8;
 			}
 		}
 	
-	sub HeadModified : Test(4) {
+	sub HeadModified : Test(5) {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new(app => 'HeadModified');
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-Type', 'text/html;charset=Shift_JIS')
+			->header_is('Content-length', 6)
 			->content_is('日本語');
 	}
 		{
