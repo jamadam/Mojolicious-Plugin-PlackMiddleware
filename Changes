@@ -23,4 +23,6 @@ Revision history for Mojolicious::Plugin::PlackMiddleware
 0.08 2011/06/24
   - Compatibility to Plack::Middleware improved
 
-0.09 2011/06/24
+0.09 2011/06/26
+  - Class prefix can be ommitted.
+  - Plugin can reports error.

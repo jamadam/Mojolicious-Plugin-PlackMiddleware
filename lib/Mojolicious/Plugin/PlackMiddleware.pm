@@ -2,6 +2,7 @@ package Mojolicious::Plugin::PlackMiddleware;
 use strict;
 use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
+use Plack::Util;
 our $VERSION = '0.09';
 
     sub register {
@@ -12,14 +13,25 @@ our $VERSION = '0.09';
             my $res = _generate_psgi_res($c->res);
             my $plack_app = sub {$res};
             while (my $e = shift @mws) {
-                require File::Spec->catdir(split(/::/, $e)). '.pm';
-                my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
-                my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
-                if (! $cond || $cond->($c)) {
-                    if ($args) {
-                        $plack_app = $e->wrap($plack_app, %$args);
-                    } else {
-                        $plack_app = $e->wrap($plack_app);
+                eval {
+                    $e = _load_class($e, 'Plack::Middleware')
+                };
+                if ($@) {
+                    warn $@;
+                } else {
+                    my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
+                    my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
+                    my $active = ($cond) ? eval {$cond->($c)} : 1;
+                    if ($@) {
+                        warn $@;
+                        $active = 0;
+                    }
+                    if ($active) {
+                        if ($args) {
+                            $plack_app = $e->wrap($plack_app, %$args);
+                        } else {
+                            $plack_app = $e->wrap($plack_app);
+                        }
                     }
                 }
             }
@@ -72,6 +84,24 @@ our $VERSION = '0.09';
         }
         return [$status, \@headers, \@body];
     }
+    
+    sub _load_class {
+        my($class, $prefix) = @_;
+        
+        if ($prefix) {
+            unless ($class =~ s/^\+// || $class =~ /^$prefix/) {
+                $class = "$prefix\::$class";
+            }
+        }
+        if ($class->can('call')) {
+            return $class;
+        }
+        my $file = $class;
+        $file =~ s!::!/!g;
+        require "$file.pm"; ## no critic
+    
+        return $class;
+    }
 
 1;
 
@@ -89,12 +119,12 @@ MojoX::Util::PlackMiddleware - ResponseFilter in Plack::Middleware style
         my $self = shift;
         
         $self->plugin('plack_middleware', [
-            'Plack::Middleware::Some1', 
-            'Plack::Middleware::Some2', {arg1 => 'some_vale'}
+            'Some1', 
+            'Some2', {arg1 => 'some_vale'}
         ]);
         $self->plugin('plack_middleware', [
-            'Plack::Middleware::Some1', sub {$condition}, 
-            'Plack::Middleware::Some2', sub {$condition}, {arg1 => 'some_vale'}
+            'Some1', sub {$condition}, 
+            'Some2', sub {$condition}, {arg1 => 'some_vale'}
         ]);
     }
     
