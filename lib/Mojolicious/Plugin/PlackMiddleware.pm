@@ -109,7 +109,7 @@ __END__
 
 =head1 NAME
 
-MojoX::Util::PlackMiddleware - ResponseFilter in Plack::Middleware style
+MojoX::Util::PlackMiddleware - Response Filter in Plack::Middleware style
 
 =head1 SYNOPSIS
 
@@ -118,11 +118,22 @@ MojoX::Util::PlackMiddleware - ResponseFilter in Plack::Middleware style
         
         my $self = shift;
         
-        $self->plugin('plack_middleware', [
+        # Mojolicious
+        $self->plugin(plack_middleware => [
             'Some1', 
             'Some2', {arg1 => 'some_vale'}
         ]);
-        $self->plugin('plack_middleware', [
+        $self->plugin(plack_middleware => [
+            'Some1', sub {$condition}, 
+            'Some2', sub {$condition}, {arg1 => 'some_vale'}
+        ]);
+        
+        # Mojolicious::Lite
+        plugin plack_middleware => [
+            'Some1', 
+            'Some2', {arg1 => 'some_vale'}
+        ];
+        plugin plack_middleware => [
             'Some1', sub {$condition}, 
             'Some2', sub {$condition}, {arg1 => 'some_vale'}
         ]);
@@ -150,9 +161,29 @@ MojoX::Util::PlackMiddleware - ResponseFilter in Plack::Middleware style
 Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
 inside Mojolicious as after_dispatch hook.
 
+=head2 OPTIONS
+
+This plugin takes an argument in Array reference which contains some
+middlewares. Each middleware can be followed by callback function for
+conditional activation, and attributes for middleware.
+
+    my $condition = sub {
+        my $c = shift; # Mojolicious controller
+        if (...) {
+            return 1; # causes the middleware hooked
+        }
+    };
+    plugin plack_middleware => [
+        Plack::Middleware::Some2, $condition, {arg1 => 'some_vale'},
+    ];
+
 =head1 METHODS
 
 =head2 register
+
+$plugin->register;
+
+Register plugin hooks in L<Mojolicious> application.
 
 =head1 AUTHOR
 
