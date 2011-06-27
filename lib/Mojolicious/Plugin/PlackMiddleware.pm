@@ -2,7 +2,6 @@ package Mojolicious::Plugin::PlackMiddleware;
 use strict;
 use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
-use Plack::Util;
 our $VERSION = '0.10';
 
     sub register {
@@ -10,7 +9,7 @@ our $VERSION = '0.10';
         $app->hook(after_dispatch => sub {
             my $c = shift;
             my @mws = @$mws;
-            my $res = _generate_psgi_res($c->res);
+            my $res = mojo_res_to_psgi_res($c->res);
             my $plack_app = sub {$res};
             while (my $e = shift @mws) {
                 $e = _load_class($e, 'Plack::Middleware');
@@ -24,11 +23,11 @@ our $VERSION = '0.10';
                     }
                 }
             }
-            $c->tx->res(_generate_mojo_res($plack_app->()));
+            $c->tx->res(psgi_res_to_mojo_res($plack_app->()));
         });
     }
     
-    sub _generate_mojo_res {
+    sub psgi_res_to_mojo_res {
         my $psgi_res = shift;
         my $mojo_res = Mojo::Message::Response->new;
         $mojo_res->code($psgi_res->[0]);
@@ -53,7 +52,7 @@ our $VERSION = '0.10';
         return $mojo_res;
     }
     
-    sub _generate_psgi_res {
+    sub mojo_res_to_psgi_res {
         my $mojo_res = shift;
         my $status = $mojo_res->code;
         my $headers = $mojo_res->content->headers;
@@ -167,6 +166,14 @@ conditional activation, and attributes for middleware.
 $plugin->register;
 
 Register plugin hooks in L<Mojolicious> application.
+
+=head2 psgi_res_to_mojo_res
+
+    my $mojo_res = psgi_res_to_mojo_res($psgi_res)
+
+=head2 mojo_res_to_psgi_res
+
+    my $psgi_res = mojo_res_to_psgi_res($mojo_res)
 
 =head1 AUTHOR
 
