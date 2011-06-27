@@ -109,26 +109,22 @@ MojoX::Util::PlackMiddleware - Response Filter in Plack::Middleware style
         
         # Mojolicious
         $self->plugin(plack_middleware => [
-            'Some1', 
-            'Some2', {arg1 => 'some_vale'}
-        ]);
-        $self->plugin(plack_middleware => [
-            'Some1', sub {$condition}, 
-            'Some2', sub {$condition}, {arg1 => 'some_vale'}
+            'MyMiddleware1', 
+            'MyMiddleware2', {arg1 => 'some_vale'},
+            'MyMiddleware3', sub {$condition}, 
+            'MyMiddleware4', sub {$condition}, {arg1 => 'some_vale'}
         ]);
         
         # Mojolicious::Lite
         plugin plack_middleware => [
-            'Some1', 
-            'Some2', {arg1 => 'some_vale'}
+            'MyMiddleware1', 
+            'MyMiddleware2', {arg1 => 'some_vale'},
+            'MyMiddleware3', sub {$condition}, 
+            'MyMiddleware4', sub {$condition}, {arg1 => 'some_vale'}
         ];
-        plugin plack_middleware => [
-            'Some1', sub {$condition}, 
-            'Some2', sub {$condition}, {arg1 => 'some_vale'}
-        ]);
     }
     
-    package Plack::Middleware::Some;
+    package Plack::Middleware::MyMiddleware1;
     use strict;
     use warnings;
     use base qw( Plack::Middleware );
@@ -163,7 +159,7 @@ conditional activation, and attributes for middleware.
         }
     };
     plugin plack_middleware => [
-        Plack::Middleware::Some2, $condition, {arg1 => 'some_vale'},
+        Plack::Middleware::MyMiddleware, $condition, {arg1 => 'some_vale'},
     ];
 
 =head1 METHODS
