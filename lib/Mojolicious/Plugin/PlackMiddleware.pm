@@ -13,25 +13,14 @@ our $VERSION = '0.09';
             my $res = _generate_psgi_res($c->res);
             my $plack_app = sub {$res};
             while (my $e = shift @mws) {
-                eval {
-                    $e = _load_class($e, 'Plack::Middleware')
-                };
-                if ($@) {
-                    warn $@;
-                } else {
-                    my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
-                    my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
-                    my $active = ($cond) ? eval {$cond->($c)} : 1;
-                    if ($@) {
-                        warn $@;
-                        $active = 0;
-                    }
-                    if ($active) {
-                        if ($args) {
-                            $plack_app = $e->wrap($plack_app, %$args);
-                        } else {
-                            $plack_app = $e->wrap($plack_app);
-                        }
+                $e = _load_class($e, 'Plack::Middleware');
+                my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
+                my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
+                if (! $cond || $cond->($c)) {
+                    if ($args) {
+                        $plack_app = $e->wrap($plack_app, %$args);
+                    } else {
+                        $plack_app = $e->wrap($plack_app);
                     }
                 }
             }
