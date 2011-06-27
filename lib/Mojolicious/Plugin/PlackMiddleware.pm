@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
 use Plack::Util;
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
     sub register {
         my ($self, $app, $mws) = @_;
@@ -54,9 +54,7 @@ our $VERSION = '0.09';
     }
     
     sub _generate_psgi_res {
-        
         my $mojo_res = shift;
-        
         my $status = $mojo_res->code;
         my $headers = $mojo_res->content->headers;
         my @headers;
