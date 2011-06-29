@@ -20,11 +20,12 @@ our $VERSION = '0.11';
                 $on_process_org->($app, $c);
                 return mojo_res_to_psgi_res($c->res);
             };
-            my @mws = @$mws;
-            while (my $e = shift @mws) {
-                $e = _load_class($e, 'Plack::Middleware');
-                my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
+            my @mws = reverse @$mws;
+            while (scalar @mws) {
                 my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
+                my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
+                my $e = shift @mws;
+                $e = _load_class($e, 'Plack::Middleware');
                 if (! $cond || $cond->($c)) {
                     if ($args) {
                         $plack_app = $e->wrap($plack_app, %$args);
@@ -147,7 +148,7 @@ __END__
 
 =head1 NAME
 
-MojoX::Util::PlackMiddleware - Response Filter in Plack::Middleware style
+MojoX::Util::PlackMiddleware - Plack::Middleware inside Mojolicious
 
 =head1 SYNOPSIS
 

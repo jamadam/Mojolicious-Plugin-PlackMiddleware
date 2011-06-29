@@ -1,6 +1,6 @@
 =head1 NAME
 
-MojoX::Util::PlackMiddleware - Response Filter in Plack::Middleware style
+MojoX::Util::PlackMiddleware - Plack::Middleware inside Mojolicious
 
 =head1 SYNOPSIS
 
@@ -46,7 +46,7 @@ MojoX::Util::PlackMiddleware - Response Filter in Plack::Middleware style
 =head1 DESCRIPTION
 
 Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
-inside Mojolicious as after_dispatch hook.
+inside Mojolicious by wrapping on_proccess.
 
 =head2 OPTIONS
 

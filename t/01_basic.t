@@ -48,7 +48,7 @@ use utf8;
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 29)
-			->content_is('original[filtered][filtered2]');
+			->content_is('original[filtered2][filtered]');
     }
 	    {
 			package SomeApp2;
