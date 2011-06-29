@@ -52,6 +52,9 @@ our $VERSION = '0.11';
         my $url = $tx->req->url;
         my $env = {
             %ENV,
+            'SERVER_PROTOCOL'   => 'HTTP/'. $tx->req->version,
+            'SERVER_NAME'       => $url->base->host,
+            'SERVER_PORT'       => $url->base->port,
             'HTTP_HOST'         => $url->base->host,
             'REQUEST_METHOD'    => $tx->req->method,
             'SCRIPT_NAME'       => '',
