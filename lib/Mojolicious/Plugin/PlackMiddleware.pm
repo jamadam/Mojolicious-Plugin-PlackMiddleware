@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::Server::PSGI;
+use Plack::Util;
 our $VERSION = '0.11';
 
     sub register {
@@ -31,7 +32,7 @@ our $VERSION = '0.11';
                     }
                 }
             }
-            my $plack_res = $plack_app->(_mojo_tx_to_psgi_env($c->tx));
+            my $plack_res = $plack_app->(_mojo_tx_to_psgi_env($c));
             if (! $c->stash('mojo.routed')) {
                 $c->render_text(''); ## cheat mojolicious 
             }
@@ -40,17 +41,46 @@ our $VERSION = '0.11';
     }
     
     sub _mojo_tx_to_psgi_env {
-        my $tx = shift;
-        my $env = \%ENV;
-        $env->{'version'} = '1.1';
-        $env->{'psgi.url_scheme'} = $tx->req->url->base->scheme;
-        $env->{HTTP_HOST}       = $tx->req->url->base->host;
-        $env->{REQUEST_METHOD}  = $tx->{method};
-        $env->{SCRIPT_NAME}     = '';
-        $env->{PATH_INFO}       = $tx->req->url->path->to_string;
-        $env->{REQUEST_URI}     = $tx->req->url->path->to_string;
-        $env->{QUERY_STRING}    = $tx->req->url->query->to_string;
+        my $c = shift;
+        my $tx = $c->tx;
+        my $url = $tx->req->url;
+        my $env = {
+            %ENV,
+            'HTTP_HOST'         => $url->base->host,
+            'REQUEST_METHOD'    => $tx->req->method,
+            'SCRIPT_NAME'       => '',
+            'PATH_INFO'         => $url->path->to_string,
+            'REQUEST_URI'       => $url->to_string,
+            'QUERY_STRING'      => $url->query->to_string,
+            'psgi.url_scheme'   => $url->base->scheme,
+            'psgi.multithread'  => Plack::Util::FALSE,
+            'psgi.version'      => [1,1],
+            'psgi.input'        => *STDIN,
+            'psgi.errors'       =>
+                Mojolicious::Plugin::PlackMiddleware::_ErrorHandle->new($c->app), 
+            'psgi.multithread'  => Plack::Util::FALSE,
+            'psgi.multiprocess' => Plack::Util::TRUE,
+            'psgi.run_once'     => Plack::Util::FALSE,
+            'psgi.streaming'    => Plack::Util::TRUE,
+            'psgi.nonblocking'  => Plack::Util::FALSE,
+        };
         return $env;
+    }
+    {
+        package Mojolicious::Plugin::PlackMiddleware::_ErrorHandle;
+        use Mojo::Base -base;
+        
+        __PACKAGE__->attr('app');
+        
+        sub new {
+            my ($class, $app) = @_;
+            my $self = $class->SUPER::new;
+            $self->app($app);
+        }
+        
+        sub print {
+            shift->app->log->debug(shift);
+        }
     }
     
     use constant CHUNK_SIZE => $ENV{MOJO_CHUNK_SIZE} || 131072;
