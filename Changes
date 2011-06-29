@@ -30,3 +30,7 @@ Revision history for Mojolicious::Plugin::PlackMiddleware
 0.10 201106/27
   - Stoped warning. I found mojolicious itself logging warning.
   - psgi_res_to_mojo_res and mojo_res_to_psgi_res added
+
+0.11 201106/29
+  - This now wraps on_process instead of hooking after_dispatch so that request
+    filters may work with this.

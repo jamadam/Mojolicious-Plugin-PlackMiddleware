@@ -2,15 +2,25 @@ package Mojolicious::Plugin::PlackMiddleware;
 use strict;
 use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
-our $VERSION = '0.10';
+use Mojo::Server::PSGI;
+our $VERSION = '0.11';
 
     sub register {
         my ($self, $app, $mws) = @_;
-        $app->hook(after_dispatch => sub {
-            my $c = shift;
+        
+        my $on_process_org = $app->on_process;
+        $app->on_process(sub {
+            my ($app, $c) = @_;
+            my $plack_app = sub {
+                my $env = shift;
+                my $tx_fixed = _psgi_env_to_mojo_tx($env, $c->tx);
+                #use Data::Dumper;
+                #warn Dumper $c->tx;
+                #$c->tx($tx_fixed);
+                $on_process_org->($app, $c);
+                return mojo_res_to_psgi_res($c->res);
+            };
             my @mws = @$mws;
-            my $res = mojo_res_to_psgi_res($c->res);
-            my $plack_app = sub {$res};
             while (my $e = shift @mws) {
                 $e = _load_class($e, 'Plack::Middleware');
                 my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
@@ -23,8 +33,50 @@ our $VERSION = '0.10';
                     }
                 }
             }
-            $c->tx->res(psgi_res_to_mojo_res($plack_app->()));
+            my $plack_res = $plack_app->(_mojo_tx_to_psgi_env($c->tx));
+            if (! $c->stash('mojo.routed')) {
+                $c->render_text(''); ## cheat mojolicious 
+            }
+            $c->tx->res(psgi_res_to_mojo_res($plack_res));
         });
+    }
+    
+    sub _mojo_tx_to_psgi_env {
+        my $tx = shift;
+        my $env = \%ENV;
+        $env->{'version'} = '1.1';
+        $env->{'psgi.url_scheme'} = $tx->req->url->base->scheme;
+        $env->{HTTP_HOST}       = $tx->req->url->base->host;
+        $env->{REQUEST_METHOD}  = $tx->{method};
+        $env->{SCRIPT_NAME}     = '';
+        $env->{PATH_INFO}       = $tx->req->url->path->to_string;
+        $env->{REQUEST_URI}     = $tx->req->url->path->to_string;
+        $env->{QUERY_STRING}    = $tx->req->url->query->to_string;
+        return $env;
+    }
+    
+    use constant CHUNK_SIZE => $ENV{MOJO_CHUNK_SIZE} || 131072;
+    
+    sub _psgi_env_to_mojo_tx {
+        my ($env, $tx) = @_;
+        $tx ||= Mojo::Transaction::HTTP->new;
+        my $req = $tx->req;
+        $req->parse($env);
+        # Store connection information
+        $tx->remote_address($env->{REMOTE_ADDR});
+        $tx->local_port($env->{SERVER_PORT});
+        
+        # Request body
+        my $len = $env->{CONTENT_LENGTH};
+        while (!$req->is_done) {
+            my $chunk = ($len && $len < CHUNK_SIZE) ? $len : CHUNK_SIZE;
+            my $read = $env->{'psgi.input'}->read(my $buffer, $chunk, 0);
+            last unless $read;
+            $req->parse($buffer);
+            $len -= $read;
+            last if $len <= 0;
+        }
+        return $tx;
     }
     
     sub psgi_res_to_mojo_res {
@@ -141,7 +193,7 @@ MojoX::Util::PlackMiddleware - Response Filter in Plack::Middleware style
 =head1 DESCRIPTION
 
 Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
-inside Mojolicious as after_dispatch hook.
+inside Mojolicious by wrapping on_proccess.
 
 =head2 OPTIONS
 
