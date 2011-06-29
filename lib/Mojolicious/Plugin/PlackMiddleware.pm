@@ -6,6 +6,9 @@ use Mojo::Server::PSGI;
 use Plack::Util;
 our $VERSION = '0.11';
 
+    ### ---
+    ### register
+    ### ---
     sub register {
         my ($self, $app, $mws) = @_;
         
@@ -40,6 +43,9 @@ our $VERSION = '0.11';
         });
     }
     
+    ### ---
+    ### convert mojo tx to psgi env
+    ### ---
     sub _mojo_tx_to_psgi_env {
         my $c = shift;
         my $tx = $c->tx;
@@ -66,25 +72,32 @@ our $VERSION = '0.11';
         };
         return $env;
     }
-    {
-        package Mojolicious::Plugin::PlackMiddleware::_ErrorHandle;
-        use Mojo::Base -base;
-        
-        __PACKAGE__->attr('app');
-        
-        sub new {
-            my ($class, $app) = @_;
-            my $self = $class->SUPER::new;
-            $self->app($app);
+    
+        ### ---
+        ### convert mojo tx to psgi env
+        ### ---
+        {
+            package Mojolicious::Plugin::PlackMiddleware::_ErrorHandle;
+            use Mojo::Base -base;
+            
+            __PACKAGE__->attr('app');
+            
+            sub new {
+                my ($class, $app) = @_;
+                my $self = $class->SUPER::new;
+                $self->app($app);
+            }
+            
+            sub print {
+                shift->app->log->debug(shift);
+            }
         }
-        
-        sub print {
-            shift->app->log->debug(shift);
-        }
-    }
     
     use constant CHUNK_SIZE => $ENV{MOJO_CHUNK_SIZE} || 131072;
     
+    ### ---
+    ### convert psgi env to mojo tx
+    ### ---
     sub _psgi_env_to_mojo_tx {
         my ($env, $tx) = @_;
         $tx ||= Mojo::Transaction::HTTP->new;
@@ -107,6 +120,9 @@ our $VERSION = '0.11';
         return $tx;
     }
     
+    ### ---
+    ### convert psgi res to mojo res
+    ### ---
     sub psgi_res_to_mojo_res {
         my $psgi_res = shift;
         my $mojo_res = Mojo::Message::Response->new;
@@ -132,6 +148,9 @@ our $VERSION = '0.11';
         return $mojo_res;
     }
     
+    ### ---
+    ### convert mojo res to psgi res
+    ### ---
     sub mojo_res_to_psgi_res {
         my $mojo_res = shift;
         my $status = $mojo_res->code;
@@ -151,6 +170,9 @@ our $VERSION = '0.11';
         return [$status, \@headers, \@body];
     }
     
+    ### ---
+    ### load mw class
+    ### ---
     sub _load_class {
         my($class, $prefix) = @_;
         
