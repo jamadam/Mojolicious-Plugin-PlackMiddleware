@@ -14,9 +14,6 @@ our $VERSION = '0.11';
             my $plack_app = sub {
                 my $env = shift;
                 my $tx_fixed = _psgi_env_to_mojo_tx($env, $c->tx);
-                #use Data::Dumper;
-                #warn Dumper $c->tx;
-                #$c->tx($tx_fixed);
                 $on_process_org->($app, $c);
                 return mojo_res_to_psgi_res($c->res);
             };
