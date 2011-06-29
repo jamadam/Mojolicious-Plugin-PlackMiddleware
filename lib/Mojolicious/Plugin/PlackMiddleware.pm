@@ -17,7 +17,7 @@ our $VERSION = '0.11';
             my ($app, $c) = @_;
             my $plack_app = sub {
                 my $env = shift;
-                my $tx_fixed = _psgi_env_to_mojo_tx($env, $c->tx);
+                my $tx_fixed = _psgi_env_to_mojo_tx($env);
                 $on_process_org->($app, $c);
                 return mojo_res_to_psgi_res($c->res);
             };
@@ -99,8 +99,8 @@ our $VERSION = '0.11';
     ### convert psgi env to mojo tx
     ### ---
     sub _psgi_env_to_mojo_tx {
-        my ($env, $tx) = @_;
-        $tx ||= Mojo::Transaction::HTTP->new;
+        my ($env) = @_;
+        my $tx = Mojo::Transaction::HTTP->new;
         my $req = $tx->req;
         $req->parse($env);
         # Store connection information
