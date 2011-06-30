@@ -31,9 +31,7 @@ Revision history for Mojolicious::Plugin::PlackMiddleware
   - Stoped warning. I found mojolicious itself logging warning.
   - psgi_res_to_mojo_res and mojo_res_to_psgi_res added
 
-0.11 2011/06/29
+0.11 2011/06/30
   - This now wraps on_process instead of hooking after_dispatch so that request
     filters may work with this.
-
-0.12 2011/06/29
   - Wrapping order of multiple middleware is onioned, compatible to plack.
