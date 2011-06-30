@@ -17,7 +17,23 @@ use MojoX::Tusu;
         
         sub startup {
             my $self = shift;
-            $self->plugin(plack_middleware => ['ForceCharset', sub {my $c = shift;1}, {charset => 'Shift_JIS'}]);
+            $self->plugin(plack_middleware => ['TestFilter2', sub {my $c = shift;1}, {charset => 'Shift_JIS'}]);
         }
+
+	package Plack::Middleware::TestFilter2;
+	use strict;
+	use warnings;
+	use base qw( Plack::Middleware );
+	
+	sub call {
+		
+		my $self = shift;
+		my $res = $self->app->(@_);
+		$self->response_cb($res, sub {
+			return sub {
+			};
+			$res;
+		});
+	}
 
 __END__

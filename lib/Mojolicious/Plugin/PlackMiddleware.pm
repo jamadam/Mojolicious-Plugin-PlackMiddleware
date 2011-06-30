@@ -62,23 +62,25 @@ our $VERSION = '0.11';
         my $c = shift;
         my $tx = $c->tx;
         my $url = $tx->req->url;
-        my $env = {
+        my $base = $url->base;
+        my $host = $base->host;
+        return {
             %ENV,
             'SERVER_PROTOCOL'   => 'HTTP/'. $tx->req->version,
-            'SERVER_NAME'       => $url->base->host,
-            'SERVER_PORT'       => $url->base->port,
-            'HTTP_HOST'         => $url->base->host,
+            'SERVER_NAME'       => $host,
+            'SERVER_PORT'       => $base->port,
+            'HTTP_HOST'         => $host,
             'REQUEST_METHOD'    => $tx->req->method,
             'SCRIPT_NAME'       => '',
             'PATH_INFO'         => $url->path->to_string,
             'REQUEST_URI'       => $url->to_string,
             'QUERY_STRING'      => $url->query->to_string,
-            'psgi.url_scheme'   => $url->base->scheme,
+            'psgi.url_scheme'   => $base->scheme,
             'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.version'      => [1,1],
             'psgi.input'        => *STDIN,
             'psgi.errors'       =>
-                Mojolicious::Plugin::PlackMiddleware::_ErrorHandle->new($c->app), 
+                            Mojolicious::Plugin::PlackMiddleware::_EH->new($c), 
             'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.multiprocess' => Plack::Util::TRUE,
             'psgi.run_once'     => Plack::Util::FALSE,
@@ -86,26 +88,25 @@ our $VERSION = '0.11';
             'psgi.nonblocking'  => Plack::Util::FALSE,
             'MOJO.CONTROLLER'   => $c,
         };
-        return $env;
     }
     
         ### ---
         ### convert mojo tx to psgi env
         ### ---
         {
-            package Mojolicious::Plugin::PlackMiddleware::_ErrorHandle;
+            package Mojolicious::Plugin::PlackMiddleware::_EH;
             use Mojo::Base -base;
             
-            __PACKAGE__->attr('app');
+            __PACKAGE__->attr('controller');
             
             sub new {
-                my ($class, $app) = @_;
+                my ($class, $c) = @_;
                 my $self = $class->SUPER::new;
-                $self->app($app);
+                $self->controller($c);
             }
             
             sub print {
-                shift->app->log->debug(shift);
+                shift->controller->app->log->debug(shift);
             }
         }
     
