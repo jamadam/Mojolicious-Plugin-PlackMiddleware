@@ -12,33 +12,47 @@ our $VERSION = '0.11';
     sub register {
         my ($self, $app, $mws) = @_;
         
-        my $on_process_org = $app->on_process;
-        $app->on_process(sub {
-            my ($app, $c) = @_;
-            my $plack_app = sub {
-                my $env = shift;
-                my $tx_fixed = _psgi_env_to_mojo_tx($env);
-                $on_process_org->($app, $c);
-                return mojo_res_to_psgi_res($c->res);
-            };
+        my @mw_table;
+        {
             my @mws = reverse @$mws;
             while (scalar @mws) {
                 my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
                 my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
                 my $e = shift @mws;
                 $e = _load_class($e, 'Plack::Middleware');
-                if (! $cond || $cond->($c)) {
-                    if ($args) {
-                        $plack_app = $e->wrap($plack_app, %$args);
+                push(@mw_table, {name => $e, args => $args, cond => $cond});
+            }
+        }
+        
+        my $on_process_org = $app->on_process;
+        
+        $app->on_process(sub {
+            
+            my ($app, $c) = @_;
+            
+            my $plack_app = sub {
+                my $env = shift;
+                $c->tx(_psgi_env_to_mojo_tx($env, $c->tx));
+                $on_process_org->($app, $c);
+                return mojo_res_to_psgi_res($c->res);
+            };
+            
+            for my $e (@mw_table) {
+                if (! $e->{cond} || $e->{cond}->($c)) {
+                    if ($e->{args}) {
+                        $plack_app = $e->{name}->wrap($plack_app, %{$e->{args}});
                     } else {
-                        $plack_app = $e->wrap($plack_app);
+                        $plack_app = $e->{name}->wrap($plack_app);
                     }
                 }
             }
+            
             my $plack_res = $plack_app->(_mojo_tx_to_psgi_env($c));
+            
             if (! $c->stash('mojo.routed')) {
                 $c->render_text(''); ## cheat mojolicious 
             }
+            
             $c->tx->res(psgi_res_to_mojo_res($plack_res));
         });
     }
@@ -47,6 +61,7 @@ our $VERSION = '0.11';
     ### convert mojo tx to psgi env
     ### ---
     sub _mojo_tx_to_psgi_env {
+        
         my $c = shift;
         my $tx = $c->tx;
         my $url = $tx->req->url;
@@ -102,8 +117,8 @@ our $VERSION = '0.11';
     ### convert psgi env to mojo tx
     ### ---
     sub _psgi_env_to_mojo_tx {
-        my ($env) = @_;
-        my $tx = Mojo::Transaction::HTTP->new;
+        my ($env, $tx_org) = @_;
+        my $tx = $tx_org || Mojo::Transaction::HTTP->new;
         my $req = $tx->req;
         $req->parse($env);
         # Store connection information
