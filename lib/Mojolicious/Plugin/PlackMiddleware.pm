@@ -12,48 +12,45 @@ our $VERSION = '0.11';
     sub register {
         my ($self, $app, $mws) = @_;
         
-        my @mw_table;
-        {
-            my @mws = reverse @$mws;
-            while (scalar @mws) {
-                my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
-                my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
-                my $e = shift @mws;
-                $e = _load_class($e, 'Plack::Middleware');
-                push(@mw_table, {name => $e, args => $args, cond => $cond});
+        my $on_process_org = $app->on_process;
+        
+        my $plack_app = sub {
+            my $env = shift;
+            my $c = $env->{'MOJO.CONTROLLER'};
+            $c->tx(_psgi_env_to_mojo_tx($env, $c->tx));
+            $on_process_org->($c->app, $c);
+            return mojo_res_to_psgi_res($c->res);
+        };
+        
+        my @mws = reverse @$mws;
+        while (scalar @mws) {
+            my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
+            my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
+            my $e = shift @mws;
+            $e = _load_class($e, 'Plack::Middleware');
+            if (! $cond) {
+                $plack_app = $e->wrap($plack_app, %$args);
+            } else {
+                $plack_app = Mojolicious::Plugin::PlackMiddleware::_Cond->wrap(
+                    $plack_app,
+                    condition => $cond,
+                    builder => sub {$e->wrap($_[0], %$args)},
+                );
             }
         }
-        
-        my $on_process_org = $app->on_process;
         
         $app->on_process(sub {
             
             my ($app, $c) = @_;
             
-            my $plack_app = sub {
-                my $env = shift;
-                $c->tx(_psgi_env_to_mojo_tx($env, $c->tx));
-                $on_process_org->($app, $c);
-                return mojo_res_to_psgi_res($c->res);
-            };
-            
-            for my $e (@mw_table) {
-                if (! $e->{cond} || $e->{cond}->($c)) {
-                    if ($e->{args}) {
-                        $plack_app = $e->{name}->wrap($plack_app, %{$e->{args}});
-                    } else {
-                        $plack_app = $e->{name}->wrap($plack_app);
-                    }
-                }
-            }
-            
-            my $plack_res = $plack_app->(_mojo_tx_to_psgi_env($c));
+            my $plack_env = _mojo_tx_to_psgi_env($c);
+            my $plack_res = $plack_app->($plack_env);
+            my $mojo_res = psgi_res_to_mojo_res($plack_res);
+            $c->tx->res($mojo_res);
             
             if (! $c->stash('mojo.routed')) {
                 $c->render_text(''); ## cheat mojolicious 
             }
-            
-            $c->tx->res(psgi_res_to_mojo_res($plack_res));
         });
     }
     
@@ -87,6 +84,7 @@ our $VERSION = '0.11';
             'psgi.run_once'     => Plack::Util::FALSE,
             'psgi.streaming'    => Plack::Util::TRUE,
             'psgi.nonblocking'  => Plack::Util::FALSE,
+            'MOJO.CONTROLLER'   => $c,
         };
         return $env;
     }
@@ -207,6 +205,18 @@ our $VERSION = '0.11';
         require "$file.pm"; ## no critic
     
         return $class;
+    }
+
+package Mojolicious::Plugin::PlackMiddleware::_Cond;
+use strict;
+use parent qw(Plack::Middleware::Conditional);
+    
+    sub call {
+        my($self, $env) = @_;
+        my $app = $self->condition->($env->{'MOJO.CONTROLLER'})
+                                                ? $self->middleware
+                                                : $self->app;
+        return $app->($env);
     }
 
 1;
