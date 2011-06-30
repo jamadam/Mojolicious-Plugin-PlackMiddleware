@@ -48,6 +48,9 @@ MojoX::Util::PlackMiddleware - Plack::Middleware inside Mojolicious
 Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
 inside Mojolicious by wrapping on_proccess.
 
+Note that if you can run your application on a plack server, there is proper
+ways to use middlewares. See L<http://blog.kraih.com/mojolicious-and-plack>.
+
 =head2 OPTIONS
 
 This plugin takes an argument in Array reference which contains some

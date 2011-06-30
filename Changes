@@ -37,3 +37,4 @@ Revision history for Mojolicious::Plugin::PlackMiddleware
   - Wrapping order of multiple middleware is onioned, compatible to plack.
 
 0.12 2011/06/30
+  - Proper way to use middlewares directed in pod
