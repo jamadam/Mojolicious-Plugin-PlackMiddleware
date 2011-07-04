@@ -48,3 +48,4 @@ plugins
 mojolicious
 middleware
 middlewares
+plack
