@@ -12,7 +12,7 @@ use utf8;
     
     sub single_filter : Test(8) {
         $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new(app => 'SomeApp');
+        my $t = Test::Mojo->new('SomeApp');
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 18)
@@ -44,7 +44,7 @@ use utf8;
 	
     sub dual_filter : Test(4) {
         $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new(app => 'SomeApp2');
+        my $t = Test::Mojo->new('SomeApp2');
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 29)
@@ -73,7 +73,7 @@ use utf8;
     
     sub with_args : Test(4) {
         $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new(app => 'SomeApp3');
+        my $t = Test::Mojo->new('SomeApp3');
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 13)
@@ -101,7 +101,7 @@ use utf8;
 	
     sub body_grows_largely : Test(4) {
         $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new(app => 'GrowLarge');
+        my $t = Test::Mojo->new('GrowLarge');
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 100001)
@@ -129,7 +129,7 @@ use utf8;
 	
 	sub HeadModified : Test(5) {
         $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new(app => 'HeadModified');
+        my $t = Test::Mojo->new('HeadModified');
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-Type', 'text/html;charset=Shift_JIS')
@@ -158,7 +158,7 @@ use utf8;
 	
 	sub enable_if_false : Test(4) {
         $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new(app => 'EnableIfFalse');
+        my $t = Test::Mojo->new('EnableIfFalse');
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 8)
@@ -186,7 +186,7 @@ use utf8;
 	
 	sub enable_if_true : Test(5) {
         $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new(app => 'EnableIfTrue');
+        my $t = Test::Mojo->new('EnableIfTrue');
         $t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 18)
@@ -221,7 +221,7 @@ use utf8;
 	sub auth : Test(8) {
         $ENV{MOJO_MODE} = 'production';
 		
-        my $t = Test::Mojo->new(app => 'AppRejected');
+        my $t = Test::Mojo->new('AppRejected');
         $t->get_ok('/index')
 			->status_is(401)
 			->header_is('Content-length', 22)
@@ -230,7 +230,7 @@ use utf8;
 		my $backup_auth = $ENV{HTTP_AUTHORIZATION};
         $ENV{HTTP_AUTHORIZATION} = 'Basic dummy';
 		
-        my $t2 = Test::Mojo->new(app => 'AppRejected');
+        my $t2 = Test::Mojo->new('AppRejected');
         $t2->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 8)
