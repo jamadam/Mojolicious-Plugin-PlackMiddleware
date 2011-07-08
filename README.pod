@@ -4,27 +4,28 @@ MojoX::Util::PlackMiddleware - Plack::Middleware inside Mojolicious
 
 =head1 SYNOPSIS
 
+    # Mojolicious
+    
     sub startup {
-        ....
         
         my $self = shift;
         
-        # Mojolicious
         $self->plugin(plack_middleware => [
             'MyMiddleware1', 
             'MyMiddleware2', {arg1 => 'some_vale'},
             'MyMiddleware3', sub {$condition}, 
             'MyMiddleware4', sub {$condition}, {arg1 => 'some_vale'}
         ]);
-        
-        # Mojolicious::Lite
-        plugin plack_middleware => [
-            'MyMiddleware1', 
-            'MyMiddleware2', {arg1 => 'some_vale'},
-            'MyMiddleware3', sub {$condition}, 
-            'MyMiddleware4', sub {$condition}, {arg1 => 'some_vale'}
-        ];
     }
+    
+    # Mojolicious::Lite
+    
+    plugin plack_middleware => [
+        'MyMiddleware1', 
+        'MyMiddleware2', {arg1 => 'some_vale'},
+        'MyMiddleware3', sub {$condition}, 
+        'MyMiddleware4', sub {$condition}, {arg1 => 'some_vale'}
+    ];
     
     package Plack::Middleware::MyMiddleware1;
     use strict;
