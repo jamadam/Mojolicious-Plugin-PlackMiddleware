@@ -49,7 +49,7 @@ our $VERSION = '0.12';
             $c->tx->res($mojo_res);
             
             if (! $c->stash('mojo.routed')) {
-                $c->render_text(''); ## cheat mojolicious 
+                $c->rendered; ## cheat mojolicious 
             }
         });
     }
