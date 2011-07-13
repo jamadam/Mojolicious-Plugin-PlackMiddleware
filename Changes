@@ -1,42 +1,44 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
-0.01 2011/03/31
-  - initial release
+0.13 2011/07/13
 
-0.02 2011/04/30
-  - Disabled $res->fix_headers which sometimes causes the responce slow.
-
-0.04 2011/06/15
-  - Tested
-  - Now it dies if loading middleware failed
-
-0.05 2011/06/23
-  - Got capable of filtering headers
-  - Distribution renamed
-
-0.06 2011/06/23
-  - enable_if added
-
-0.07 2011/06/24
-  - API changed. Now this isa plugin
-
-0.08 2011/06/24
-  - Compatibility to Plack::Middleware improved
-
-0.09 2011/06/26
-  - Class prefix can be ommitted.
-  - Plugin can reports error.
-
-0.10 2011/06/27
-  - Stoped warning. I found mojolicious itself logging warning.
-  - psgi_res_to_mojo_res and mojo_res_to_psgi_res added
+0.12 2011/07/13
+  - Proper way to use middlewares directed in pod
+  - A dependency for test specified
+  - FIX: Hasn't worked on port specific request
 
 0.11 2011/06/30
   - This now wraps on_process instead of hooking after_dispatch so that request
     filters may work with this.
   - Wrapping order of multiple middleware is onioned, compatible to plack.
 
-0.12 2011/07/13
-  - Proper way to use middlewares directed in pod
-  - A dependency for test specified
-  - FIX: Hasn't worked on port specific request
+0.10 2011/06/27
+  - Stoped warning. I found mojolicious itself logging warning.
+  - psgi_res_to_mojo_res and mojo_res_to_psgi_res added
+
+0.09 2011/06/26
+  - Class prefix can be ommitted.
+  - Plugin can reports error.
+
+0.08 2011/06/24
+  - Compatibility to Plack::Middleware improved
+
+0.07 2011/06/24
+  - API changed. Now this isa plugin
+
+0.06 2011/06/23
+  - enable_if added
+
+0.05 2011/06/23
+  - Got capable of filtering headers
+  - Distribution renamed
+
+0.04 2011/06/15
+  - Tested
+  - Now it dies if loading middleware failed
+
+0.02 2011/04/30
+  - Disabled $res->fix_headers which sometimes causes the responce slow.
+
+0.01 2011/03/31
+  - initial release
