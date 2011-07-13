@@ -36,6 +36,7 @@ Revision history for Mojolicious::Plugin::PlackMiddleware
     filters may work with this.
   - Wrapping order of multiple middleware is onioned, compatible to plack.
 
-0.12 2011/07/08
+0.12 2011/07/13
   - Proper way to use middlewares directed in pod
   - A dependency for test specified
+  - FIX: Hasn't worked on port specific request
