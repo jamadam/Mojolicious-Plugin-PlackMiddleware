@@ -4,7 +4,7 @@ use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::Server::PSGI;
 use Plack::Util;
-our $VERSION = '0.13';
+our $VERSION = '0.14';
 
     ### ---
     ### register
