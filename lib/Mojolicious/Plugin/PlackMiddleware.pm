@@ -61,16 +61,21 @@ our $VERSION = '0.13';
         
         my $c = shift;
         my $tx = $c->tx;
-        my $url = $tx->req->url;
+        my $req = $tx->req;
+        my $url = $req->url;
         my $base = $url->base;
         my $host = $base->host;
         return {
             %ENV,
-            'SERVER_PROTOCOL'   => 'HTTP/'. $tx->req->version,
+            'SERVER_PROTOCOL'   => 'HTTP/'. $req->version,
             'SERVER_NAME'       => $host,
             'SERVER_PORT'       => $base->port,
             'HTTP_HOST'         => $host. ':' .$base->port,
-            'REQUEST_METHOD'    => $tx->req->method,
+            'HTTP_AUTHORIZATION' => sub {
+                    my $a = $req->headers->header('authorization');
+                    return $a;
+                }->(),
+            'REQUEST_METHOD'    => $req->method,
             'SCRIPT_NAME'       => '',
             'PATH_INFO'         => $url->path->to_string,
             'REQUEST_URI'       => $url->to_string,
