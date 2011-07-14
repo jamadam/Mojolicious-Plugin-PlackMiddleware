@@ -84,7 +84,7 @@ Register plugin hooks in L<Mojolicious> application.
 
     my $psgi_res = mojo_res_to_psgi_res($mojo_res)
 
-=Example1
+=head1 Example1
 
     $self->plugin(plack_middleware => [
         'Auth::Basic' => sub {shift->req->url =~ qr{/path1/}}, {

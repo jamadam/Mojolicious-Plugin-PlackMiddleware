@@ -227,19 +227,11 @@ use utf8;
 			->header_is('Content-length', 22)
 			->content_is('Authorization required');
 		
-		my $backup_auth = $ENV{HTTP_AUTHORIZATION};
-        $ENV{HTTP_AUTHORIZATION} = 'Basic dummy';
-		
         my $t2 = Test::Mojo->new('AppRejected');
-        $t2->get_ok('/index')
+        $t2->get_ok('/index', {Authorization => "Basic dXNlcjpwYXNz"})
 			->status_is(200)
 			->header_is('Content-length', 8)
 			->content_is('original');
-		if (defined $backup_auth) {
-			$ENV{HTTP_AUTHORIZATION} = $backup_auth;
-		} else {
-			delete $ENV{HTTP_AUTHORIZATION};
-		}
 	}
 		{
 			package AppRejected;
@@ -253,7 +245,7 @@ use utf8;
 			sub startup {
 				my $self = shift;
 				
-				$self->plugin('plack_middleware', ["Auth::Basic", {authenticator => sub {1}}]);
+				$self->plugin(plack_middleware => ["Auth::Basic", {authenticator => sub {1}}]);
 				
 				$self->routes->route('/index')->to(cb => sub{
 					$_[0]->render_text('original');

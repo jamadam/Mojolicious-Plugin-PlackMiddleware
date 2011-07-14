@@ -73,7 +73,7 @@ our $VERSION = '0.14';
             'HTTP_HOST'         => $host. ':' .$base->port,
             'HTTP_AUTHORIZATION' => sub {
                     my $a = $req->headers->header('authorization');
-                    return $a;
+                    return $a || '';
                 }->(),
             'REQUEST_METHOD'    => $req->method,
             'SCRIPT_NAME'       => '',
@@ -315,7 +315,7 @@ Register plugin hooks in L<Mojolicious> application.
 
     my $psgi_res = mojo_res_to_psgi_res($mojo_res)
 
-=Example1
+=head1 Example1
 
     $self->plugin(plack_middleware => [
         'Auth::Basic' => sub {shift->req->url =~ qr{/path1/}}, {
