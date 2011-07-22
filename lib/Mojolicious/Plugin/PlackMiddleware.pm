@@ -4,6 +4,7 @@ use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::Server::PSGI;
 use Plack::Util;
+use Mojo::Message::Request;
 our $VERSION = '0.14';
 
     ### ---
@@ -83,7 +84,6 @@ our $VERSION = '0.14';
             'psgi.url_scheme'   => $base->scheme,
             'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.version'      => [1,1],
-            #'psgi.input'        => *STDIN,
             'psgi.errors'       =>
                             Mojolicious::Plugin::PlackMiddleware::_EH->new($c), 
             'psgi.multithread'  => Plack::Util::FALSE,
@@ -114,35 +114,15 @@ our $VERSION = '0.14';
                 shift->controller->app->log->debug(shift);
             }
         }
-    
-    use constant CHUNK_SIZE => $ENV{MOJO_CHUNK_SIZE} || 131072;
-    
+
     ### ---
     ### convert psgi env to mojo tx
     ### ---
     sub _psgi_env_to_mojo_tx {
-        my ($env, $tx_org) = @_;
-        my $tx = $tx_org || Mojo::Transaction::HTTP->new;
-        my $req = $tx->req;
-        my $content = $tx->req->content;
-        #$req->content(Mojo::Content->new); # cheat mojolicious
-        $req->parse($env);
-        $tx->req->content($content);
-        
-        # Store connection information
+        my ($env, $tx) = @_;
+        $tx->req(Mojo::Message::Request->new->parse($env));
         $tx->remote_address($env->{REMOTE_ADDR});
         $tx->local_port($env->{SERVER_PORT});
-        
-        # Request body
-        #my $len = $env->{CONTENT_LENGTH};
-        #while (!$req->is_done) {
-        #    my $chunk = ($len && $len < CHUNK_SIZE) ? $len : CHUNK_SIZE;
-        #    my $read = $env->{'psgi.input'}->read(my $buffer, $chunk, 0);
-        #    last unless $read;
-        #    $req->parse($buffer);
-        #    $len -= $read;
-        #    last if $len <= 0;
-        #}
         return $tx;
     }
     

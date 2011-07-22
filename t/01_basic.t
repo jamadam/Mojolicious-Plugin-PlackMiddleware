@@ -22,6 +22,17 @@ use utf8;
 			->header_is('Content-length', 13)
 			->content_is('css[filtered]');
     }
+    
+    sub multipart : Test(1) {
+        $ENV{MOJO_MODE} = 'production';
+        my $t = Test::Mojo->new('SomeApp');
+		local $SIG{ALRM} = sub { die "timeout\n" }; alarm 2;
+		$t->tx($t->ua->get('/index',
+			{'Content-Type' => 'multipart/form-data; boundary="abcdefg"'},
+			"\x0d\x0a\x0d\x0acontent\x0d\x0a--abcdefg--\x0d\x0a")
+		);
+		$t->content_is('original[filtered]');
+    }
 		{
 			package SomeApp;
 			use strict;
@@ -252,17 +263,6 @@ use utf8;
 				});
 			}
 		}
-    
-    sub multipart : Test(1) {
-        $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new('SomeApp');
-		local $SIG{ALRM} = sub { die "timeout\n" }; alarm 2;
-		$t->tx($t->ua->get('/index',
-			{'Content-Type' => 'multipart/form-data; boundary="abcdefg"'},
-			"\x0d\x0a\x0d\x0acontent\x0d\x0a--abcdefg--\x0d\x0a")
-		);
-		$t->content_is('original[filtered]');
-    }
 	
     END {
         $ENV{MOJO_MODE} = $backup;
