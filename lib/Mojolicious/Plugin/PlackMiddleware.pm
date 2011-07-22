@@ -127,19 +127,10 @@ our $VERSION = '0.15';
             $headers->header(shift @{$psgi_res->[1]} => shift @{$psgi_res->[1]});
         }
         
-        # Content-Length should be set by mojolicious
-        $headers->remove('Content-Length');
+        $headers->remove('Content-Length'); # should be set by mojolicious later
         
         my $asset = $mojo_res->content->asset;
-        if (ref $psgi_res->[2] eq 'ARRAY') {
-            for my $chunk (@{$psgi_res->[2]}) {
-                $asset->add_chunk($chunk);
-            }
-        } else {
-            while (my $chunk = $psgi_res->[2]->getline) {
-                $asset->add_chunk($chunk);
-            }
-        }
+        Plack::Util::foreach($psgi_res->[2], sub {$asset->add_chunk($_[0])});
         return $mojo_res;
     }
     
