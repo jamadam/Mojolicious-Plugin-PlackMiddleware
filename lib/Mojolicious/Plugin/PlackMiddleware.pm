@@ -18,7 +18,7 @@ our $VERSION = '0.14';
         my $plack_app = sub {
             my $env = shift;
             my $c = $env->{'MOJO.CONTROLLER'};
-            $c->tx(_psgi_env_to_mojo_tx($env, $c->tx));
+            $c->req(Mojo::Message::Request->new->parse($env));
             $on_process_org->($c->app, $c);
             return mojo_res_to_psgi_res($c->res);
         };
@@ -50,7 +50,7 @@ our $VERSION = '0.14';
             $c->tx->res($mojo_res);
             
             if (! $c->stash('mojo.routed')) {
-                $c->rendered; ## cheat mojolicious 
+                $c->rendered;
             }
         });
     }
@@ -114,17 +114,6 @@ our $VERSION = '0.14';
                 shift->controller->app->log->debug(shift);
             }
         }
-
-    ### ---
-    ### convert psgi env to mojo tx
-    ### ---
-    sub _psgi_env_to_mojo_tx {
-        my ($env, $tx) = @_;
-        $tx->req(Mojo::Message::Request->new->parse($env));
-        $tx->remote_address($env->{REMOTE_ADDR});
-        $tx->local_port($env->{SERVER_PORT});
-        return $tx;
-    }
     
     ### ---
     ### convert psgi res to mojo res
