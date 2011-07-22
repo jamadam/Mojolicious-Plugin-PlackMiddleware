@@ -5,7 +5,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::Server::PSGI;
 use Plack::Util;
 use Mojo::Message::Request;
-our $VERSION = '0.14';
+our $VERSION = '0.15';
 
     ### ---
     ### register
