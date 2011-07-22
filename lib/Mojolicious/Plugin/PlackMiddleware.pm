@@ -125,7 +125,7 @@ our $VERSION = '0.14';
         my $tx = $tx_org || Mojo::Transaction::HTTP->new;
         my $req = $tx->req;
         my $content = $tx->req->content;
-        $req->content(Mojo::Content->new); # cheat mojolicious
+        #$req->content(Mojo::Content->new); # cheat mojolicious
         $req->parse($env);
         $tx->req->content($content);
         
