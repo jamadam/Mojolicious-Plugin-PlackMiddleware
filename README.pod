@@ -33,17 +33,13 @@ MojoX::Util::PlackMiddleware - Plack::Middleware inside Mojolicious
     use base qw( Plack::Middleware );
     
     sub call {
-        
-        my ($self, $env) = @_;
-        $self->response_cb($self->app->($env), sub {
-            my $res = shift;
-            
-            ### DO SOMETHING
-            
-            $res;
-        });
+        my($self, $env) = @_;
+        # pre-processing $env
+        my $res = $self->app->($env);
+        # post-processing $res
+        return $res;
     }
-
+  
 =head1 DESCRIPTION
 
 Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
