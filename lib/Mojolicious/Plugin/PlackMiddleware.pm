@@ -29,15 +29,11 @@ our $VERSION = '0.15';
             my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
             my $e = shift @mws;
             $e = _load_class($e, 'Plack::Middleware');
-            if (! $cond) {
-                $plack_app = $e->wrap($plack_app, %$args);
-            } else {
-                $plack_app = Mojolicious::Plugin::PlackMiddleware::_Cond->wrap(
-                    $plack_app,
-                    condition => $cond,
-                    builder => sub {$e->wrap($_[0], %$args)},
-                );
-            }
+            $plack_app = Mojolicious::Plugin::PlackMiddleware::_Conditional->wrap(
+                $plack_app,
+                condition => $cond,
+                builder => sub {$e->wrap($_[0], %$args)},
+            );
         }
         
         $app->on_process(sub {
@@ -94,26 +90,6 @@ our $VERSION = '0.15';
             'MOJO.CONTROLLER'   => $c,
         };
     }
-    
-        ### ---
-        ### convert mojo tx to psgi env
-        ### ---
-        {
-            package Mojolicious::Plugin::PlackMiddleware::_EH;
-            use Mojo::Base -base;
-            
-            __PACKAGE__->attr('controller');
-            
-            sub new {
-                my ($class, $c) = @_;
-                my $self = $class->SUPER::new;
-                $self->controller($c);
-            }
-            
-            sub print {
-                shift->controller->app->log->debug(shift);
-            }
-        }
     
     ### ---
     ### convert psgi res to mojo res
@@ -177,16 +153,40 @@ our $VERSION = '0.15';
         return $class;
     }
 
-package Mojolicious::Plugin::PlackMiddleware::_Cond;
+
+### ---
+### Error Handler
+### ---
+package Mojolicious::Plugin::PlackMiddleware::_EH;
+use Mojo::Base -base;
+    
+    __PACKAGE__->attr('controller');
+    
+    sub new {
+        my ($class, $c) = @_;
+        my $self = $class->SUPER::new;
+        $self->controller($c);
+    }
+    
+    sub print {
+        shift->controller->app->log->debug(shift);
+    }
+
+### ---
+### Port of Plack::Middleware::Conditional with mojolicious controller
+### ---
+package Mojolicious::Plugin::PlackMiddleware::_Conditional;
 use strict;
 use parent qw(Plack::Middleware::Conditional);
     
     sub call {
         my($self, $env) = @_;
-        my $app = $self->condition->($env->{'MOJO.CONTROLLER'})
-                                                ? $self->middleware
-                                                : $self->app;
-        return $app->($env);
+        my $cond = $self->condition;
+        if (! $cond || $cond->($env->{'MOJO.CONTROLLER'})) {
+            return $self->middleware->($env);
+        } else {
+            return $self->app->($env);
+        }
     }
 
 1;
