@@ -1,6 +1,7 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
 0.15 2011/07/23
+  - mojo_req_to_psgi_env added
 
 0.14 2011/07/23
   - Fixed a bug on multipart request

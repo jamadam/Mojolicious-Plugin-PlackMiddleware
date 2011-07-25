@@ -39,8 +39,10 @@ our $VERSION = '0.15';
         $app->on_process(sub {
             
             my ($app, $c) = @_;
-            
-            my $plack_env = _mojo_tx_to_psgi_env($c);
+            my $plack_env = mojo_req_to_psgi_env($c->req);
+            $plack_env->{'psgi.errors'} =
+                            Mojolicious::Plugin::PlackMiddleware::_EH->new($c);
+            $plack_env->{'MOJO.CONTROLLER'} = $c;
             my $plack_res = $plack_app->($plack_env);
             my $mojo_res = psgi_res_to_mojo_res($plack_res);
             $c->tx->res($mojo_res);
@@ -54,25 +56,23 @@ our $VERSION = '0.15';
     ### ---
     ### convert mojo tx to psgi env
     ### ---
-    sub _mojo_tx_to_psgi_env {
+    sub mojo_req_to_psgi_env {
         
-        my $c = shift;
-        my $tx = $c->tx;
-        my $req = $tx->req;
-        my $url = $req->url;
+        my $mojo_req = shift;
+        my $url = $mojo_req->url;
         my $base = $url->base;
         my $host = $base->host;
         return {
             %ENV,
-            'SERVER_PROTOCOL'   => 'HTTP/'. $req->version,
+            'SERVER_PROTOCOL'   => 'HTTP/'. $mojo_req->version,
             'SERVER_NAME'       => $host,
             'SERVER_PORT'       => $base->port,
             'HTTP_HOST'         => $host. ':' .$base->port,
             'HTTP_AUTHORIZATION' => sub {
-                    my $a = $req->headers->header('authorization');
+                    my $a = $mojo_req->headers->header('authorization');
                     return $a || '';
                 }->(),
-            'REQUEST_METHOD'    => $req->method,
+            'REQUEST_METHOD'    => $mojo_req->method,
             'SCRIPT_NAME'       => '',
             'PATH_INFO'         => $url->path->to_string,
             'REQUEST_URI'       => $url->to_string,
@@ -80,14 +80,12 @@ our $VERSION = '0.15';
             'psgi.url_scheme'   => $base->scheme,
             'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.version'      => [1,1],
-            'psgi.errors'       =>
-                            Mojolicious::Plugin::PlackMiddleware::_EH->new($c), 
+            'psgi.errors'       => *STDERR,
             'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.multiprocess' => Plack::Util::TRUE,
             'psgi.run_once'     => Plack::Util::FALSE,
             'psgi.streaming'    => Plack::Util::TRUE,
             'psgi.nonblocking'  => Plack::Util::FALSE,
-            'MOJO.CONTROLLER'   => $c,
         };
     }
     
@@ -238,8 +236,10 @@ MojoX::Util::PlackMiddleware - Plack::Middleware inside Mojolicious
 =head1 DESCRIPTION
 
 Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
-inside Mojolicious by wrapping on_proccess.
+inside Mojolicious by wrapping on_proccess so that the portability of your app
+covers pre/post process too.
 
+It also aimed at those who used to Mojolicious bundle servers.
 Note that if you can run your application on a plack server, there is proper
 ways to use middlewares. See L<http://blog.kraih.com/mojolicious-and-plack>.
 
@@ -266,6 +266,10 @@ conditional activation, and attributes for middleware.
 $plugin->register;
 
 Register plugin hooks in L<Mojolicious> application.
+
+=head2 mojo_req_to_psgi_env
+
+    my $plack_env = mojo_req_to_psgi_env($mojo_req)
 
 =head2 psgi_res_to_mojo_res
 
