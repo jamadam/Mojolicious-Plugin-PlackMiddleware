@@ -2,7 +2,6 @@ use strict;
 use warnings;
 use Test::Memory::Cycle;
 use Test::More;
-use MojoX::Tusu;
 
     use Test::More tests => 1;
     

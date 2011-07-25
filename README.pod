@@ -1,6 +1,6 @@
 =head1 NAME
 
-MojoX::Util::PlackMiddleware - Plack::Middleware inside Mojolicious
+Mojolicious::Plugin::PlackMiddleware - Plack::Middleware inside Mojolicious
 
 =head1 SYNOPSIS
 

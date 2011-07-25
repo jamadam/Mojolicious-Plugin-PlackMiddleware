@@ -5,7 +5,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::Server::PSGI;
 use Plack::Util;
 use Mojo::Message::Request;
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
     ### ---
     ### register
@@ -193,7 +193,7 @@ __END__
 
 =head1 NAME
 
-MojoX::Util::PlackMiddleware - Plack::Middleware inside Mojolicious
+Mojolicious::Plugin::PlackMiddleware - Plack::Middleware inside Mojolicious
 
 =head1 SYNOPSIS
 
