@@ -43,8 +43,10 @@ MojoX::Util::PlackMiddleware - Plack::Middleware inside Mojolicious
 =head1 DESCRIPTION
 
 Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
-inside Mojolicious by wrapping on_proccess.
+inside Mojolicious by wrapping on_proccess so that the portability of your app
+covers pre/post process too.
 
+It also aimed at those who used to Mojolicious bundle servers.
 Note that if you can run your application on a plack server, there is proper
 ways to use middlewares. See L<http://blog.kraih.com/mojolicious-and-plack>.
 
@@ -72,11 +74,21 @@ $plugin->register;
 
 Register plugin hooks in L<Mojolicious> application.
 
+=head2 mojo_req_to_psgi_env
+
+This is a utility method. This is for internal use.
+
+    my $plack_env = mojo_req_to_psgi_env($mojo_req)
+
 =head2 psgi_res_to_mojo_res
+
+This is a utility method. This is for internal use.
 
     my $mojo_res = psgi_res_to_mojo_res($psgi_res)
 
 =head2 mojo_res_to_psgi_res
+
+This is a utility method. This is for internal use.
 
     my $psgi_res = mojo_res_to_psgi_res($mojo_res)
 

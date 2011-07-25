@@ -269,13 +269,19 @@ Register plugin hooks in L<Mojolicious> application.
 
 =head2 mojo_req_to_psgi_env
 
+This is a utility method. This is for internal use.
+
     my $plack_env = mojo_req_to_psgi_env($mojo_req)
 
 =head2 psgi_res_to_mojo_res
 
+This is a utility method. This is for internal use.
+
     my $mojo_res = psgi_res_to_mojo_res($psgi_res)
 
 =head2 mojo_res_to_psgi_res
+
+This is a utility method. This is for internal use.
 
     my $psgi_res = mojo_res_to_psgi_res($mojo_res)
 
