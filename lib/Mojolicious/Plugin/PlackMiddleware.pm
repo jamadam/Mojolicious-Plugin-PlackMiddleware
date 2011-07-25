@@ -29,7 +29,7 @@ our $VERSION = '0.15';
             my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
             my $e = shift @mws;
             $e = _load_class($e, 'Plack::Middleware');
-            $plack_app = Mojolicious::Plugin::PlackMiddleware::_Conditional->wrap(
+            $plack_app = Mojolicious::Plugin::PlackMiddleware::_Cond->wrap(
                 $plack_app,
                 condition => $cond,
                 builder => sub {$e->wrap($_[0], %$args)},
@@ -173,7 +173,7 @@ use Mojo::Base -base;
 ### ---
 ### Port of Plack::Middleware::Conditional with mojolicious controller
 ### ---
-package Mojolicious::Plugin::PlackMiddleware::_Conditional;
+package Mojolicious::Plugin::PlackMiddleware::_Cond;
 use strict;
 use parent qw(Plack::Middleware::Conditional);
     
