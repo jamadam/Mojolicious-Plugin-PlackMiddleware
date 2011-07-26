@@ -38,7 +38,6 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
@@ -66,7 +65,6 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
@@ -95,7 +93,6 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
@@ -123,7 +120,6 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
@@ -152,7 +148,6 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
@@ -180,7 +175,6 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use lib 't/lib';
 			
 			sub startup {
 				my $self = shift;
@@ -208,7 +202,6 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use lib 't/lib';
 			use Scalar::Util;
 			use Test::More;
 			
@@ -249,7 +242,6 @@ use utf8;
 			use strict;
 			use warnings;
 			use base 'Mojolicious';
-			use lib 't/lib';
 			use Scalar::Util;
 			use Test::More;
 			
@@ -378,54 +370,6 @@ use utf8;
 				$h->set('Content-Length', length $fixed_body);
 				return $res;
 			});
-		}
-	
-	package Plack::Middleware::Auth::Basic;
-	use strict;
-	use parent qw(Plack::Middleware);
-	use Plack::Util::Accessor qw( realm authenticator );
-	use Scalar::Util;
-	use MIME::Base64;
-		
-		sub prepare_app {
-			my $self = shift;
-		
-			my $auth = $self->authenticator or die 'authenticator is not set';
-			if (Scalar::Util::blessed($auth) && $auth->can('authenticate')) {
-				$self->authenticator(sub { $auth->authenticate(@_[0,1]) }); # because Authen::Simple barfs on 3 params
-			} elsif (ref $auth ne 'CODE') {
-				die 'authenticator should be a code reference or an object that responds to authenticate()';
-			}
-		}
-		
-		sub call {
-			my($self, $env) = @_;
-		
-			my $auth = $env->{HTTP_AUTHORIZATION}
-				or return $self->unauthorized;
-			
-			if ($auth =~ /^Basic (.*)$/) {
-				my($user, $pass) = split /:/, (MIME::Base64::decode($1) || ":");
-				$pass = '' unless defined $pass;
-				if ($self->authenticator->($user, $pass, $env)) {
-					$env->{REMOTE_USER} = $user;
-					return $self->app->($env);
-				}
-			}
-		
-			return $self->unauthorized;
-		}
-		
-		sub unauthorized {
-			my $self = shift;
-			my $body = 'Authorization required';
-			return [
-				401,
-				[ 'Content-Type' => 'text/plain',
-				  'Content-Length' => length $body,
-				  'WWW-Authenticate' => 'Basic realm="' . ($self->realm || "restricted area") . '"' ],
-				[ $body ],
-			];
 		}
 		
 		1;
