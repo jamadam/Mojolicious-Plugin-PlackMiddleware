@@ -1,5 +1,7 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
+0.18 2011/07/26
+
 0.17 2011/07/25
   - Dependency on Mojolicious specified
 
