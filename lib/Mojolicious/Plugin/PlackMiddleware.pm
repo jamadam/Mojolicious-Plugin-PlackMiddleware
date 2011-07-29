@@ -5,7 +5,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Mojo::Server::PSGI;
 use Plack::Util;
 use Mojo::Message::Request;
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 
     ### ---
     ### register
@@ -18,7 +18,7 @@ our $VERSION = '0.18';
         my $plack_app = sub {
             my $env = shift;
             my $c = $env->{'MOJO.CONTROLLER'};
-            $c->tx->req(Mojo::Message::Request->new->parse($env));
+            $c->tx->req(psgi_env_to_mojo_req($env));
             $on_process_org->($c->app, $c);
             return mojo_res_to_psgi_res($c->res);
         };
@@ -53,6 +53,27 @@ our $VERSION = '0.18';
         });
     }
     
+    use constant CHUNK_SIZE => $ENV{MOJO_CHUNK_SIZE} || 131072;
+    
+    sub psgi_env_to_mojo_req {
+        
+        my $env = shift;
+        my $req = Mojo::Message::Request->new->parse($env);
+        
+        # Request body
+        my $len = $env->{CONTENT_LENGTH};
+        while (!$req->is_done) {
+            my $chunk = ($len && $len < CHUNK_SIZE) ? $len : CHUNK_SIZE;
+            my $read = $env->{'psgi.input'}->read(my $buffer, $chunk, 0);
+            last unless $read;
+            $req->parse($buffer);
+            $len -= $read;
+            last if $len <= 0;
+        }
+        
+        return $req;
+    }
+    
     ### ---
     ### convert mojo tx to psgi env
     ### ---
@@ -62,6 +83,9 @@ our $VERSION = '0.18';
         my $url = $mojo_req->url;
         my $base = $url->base;
         my $host = $base->host;
+        my $length = length($mojo_req->body);
+        my $body = Mojolicious::Plugin::PlackMiddleware::PSGIInput->new($mojo_req->body);
+        
         return {
             %ENV,
             'SERVER_PROTOCOL'   => 'HTTP/'. $mojo_req->version,
@@ -81,6 +105,8 @@ our $VERSION = '0.18';
             'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.version'      => [1,1],
             'psgi.errors'       => *STDERR,
+            'CONTENT_LENGTH'    => $length,
+            'psgi.input'        => $body,
             'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.multiprocess' => Plack::Util::TRUE,
             'psgi.run_once'     => Plack::Util::FALSE,
@@ -184,6 +210,23 @@ use parent qw(Plack::Middleware::Conditional);
             return $self->middleware->($env);
         } else {
             return $self->app->($env);
+        }
+    }
+    
+package Mojolicious::Plugin::PlackMiddleware::PSGIInput;
+use strict;
+use warnings;
+    
+    sub new {
+        my ($class, $content) = @_;
+        return bless [$content, 0], $class;
+    }
+    
+    sub read {
+        my $self = shift;
+        if ($_[0] = substr($self->[0], $self->[1], $_[1])) {
+            $self->[1] += $_[1];
+            return 1;
         }
     }
 

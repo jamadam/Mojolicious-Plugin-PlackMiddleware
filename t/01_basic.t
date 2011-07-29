@@ -52,6 +52,32 @@ use utf8;
 			}
 		}
     
+    sub form_data : Test(2) {
+        $ENV{MOJO_MODE} = 'production';
+        my $t = Test::Mojo->new('FormData');
+		$t->post_form_ok('/index' => {a => 'b'});
+    }
+		{
+			package FormData;
+			use strict;
+			use warnings;
+			use base 'Mojolicious';
+			use Test::More;
+			
+			sub startup {
+				my $self = shift;
+				
+				$self->plugin('plack_middleware', [
+					'TestFilter'
+				]);
+				
+				$self->routes->route('/index')->to(cb => sub{
+					is($_[0]->req->body, 'a=b', 'req body set');
+					$_[0]->render_text('original');
+				});
+			}
+		}
+    
     sub req_modified : Test(8) {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('ReqModified');
