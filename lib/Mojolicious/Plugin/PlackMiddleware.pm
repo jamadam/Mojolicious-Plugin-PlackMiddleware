@@ -210,7 +210,7 @@ use parent qw(Plack::Middleware::Conditional);
     sub call {
         my($self, $env) = @_;
         my $cond = $self->condition;
-        if (! $cond || $cond->($env->{'MOJO.CONTROLLER'})) {
+        if (! $cond || $cond->($env->{'MOJO.CONTROLLER'}, $env)) {
             return $self->middleware->($env);
         } else {
             return $self->app->($env);
