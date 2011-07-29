@@ -86,16 +86,20 @@ our $VERSION = '0.19';
         my $length = length($mojo_req->body);
         my $body = Mojolicious::Plugin::PlackMiddleware::PSGIInput->new($mojo_req->body);
         
+        my %headers = %{$mojo_req->headers->to_hash};
+        for my $key (keys %headers) {
+           my $value = $headers{$key};
+           delete $headers{$key};
+           $key =~ s{-}{_};
+           $headers{'HTTP_'. uc $key} = $value;
+        }
+        
         return {
             %ENV,
+            %headers,
             'SERVER_PROTOCOL'   => 'HTTP/'. $mojo_req->version,
             'SERVER_NAME'       => $host,
             'SERVER_PORT'       => $base->port,
-            'HTTP_HOST'         => $host. ':' .$base->port,
-            'HTTP_AUTHORIZATION' => sub {
-                    my $a = $mojo_req->headers->header('authorization');
-                    return $a || '';
-                }->(),
             'REQUEST_METHOD'    => $mojo_req->method,
             'SCRIPT_NAME'       => '',
             'PATH_INFO'         => $url->path->to_string,

@@ -52,7 +52,7 @@ use utf8;
 			}
 		}
     
-    sub form_data : Test(2) {
+    sub form_data : Test(3) {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('FormData');
 		$t->post_form_ok('/index' => {a => 'b'});
@@ -72,6 +72,8 @@ use utf8;
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
+					my $content_type = $_[0]->req->headers->header('content-type');
+					is($content_type, 'application/x-www-form-urlencoded', 'right content type');
 					is($_[0]->req->body, 'a=b', 'req body set');
 					$_[0]->render_text('original');
 				});
