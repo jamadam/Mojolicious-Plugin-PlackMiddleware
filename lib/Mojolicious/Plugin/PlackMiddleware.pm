@@ -314,6 +314,12 @@ $plugin->register;
 
 Register plugin hooks in L<Mojolicious> application.
 
+=head2 psgi_env_to_mojo_req
+
+This is a utility method. This is for internal use.
+
+    my $mojo_req = psgi_env_to_mojo_req($psgi_env)
+
 =head2 mojo_req_to_psgi_env
 
 This is a utility method. This is for internal use.
