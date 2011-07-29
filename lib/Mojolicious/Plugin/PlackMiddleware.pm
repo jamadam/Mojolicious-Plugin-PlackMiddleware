@@ -82,8 +82,6 @@ our $VERSION = '0.20';
         my $mojo_req = shift;
         my $url = $mojo_req->url;
         my $base = $url->base;
-        my $host = $base->host;
-        my $length = length($mojo_req->body);
         my $body = Mojolicious::Plugin::PlackMiddleware::PSGIInput->new($mojo_req->body);
         
         my %headers = %{$mojo_req->headers->to_hash};
@@ -98,7 +96,7 @@ our $VERSION = '0.20';
             %ENV,
             %headers,
             'SERVER_PROTOCOL'   => 'HTTP/'. $mojo_req->version,
-            'SERVER_NAME'       => $host,
+            'SERVER_NAME'       => $base->host,
             'SERVER_PORT'       => $base->port,
             'REQUEST_METHOD'    => $mojo_req->method,
             'SCRIPT_NAME'       => '',
@@ -109,7 +107,6 @@ our $VERSION = '0.20';
             'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.version'      => [1,1],
             'psgi.errors'       => *STDERR,
-            'CONTENT_LENGTH'    => $length,
             'psgi.input'        => $body,
             'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.multiprocess' => Plack::Util::TRUE,
