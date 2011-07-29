@@ -297,7 +297,8 @@ middlewares. Each middleware can be followed by callback function for
 conditional activation, and attributes for middleware.
 
     my $condition = sub {
-        my $c = shift; # Mojolicious controller
+        my $c   = shift; # Mojolicious controller
+        my $env = shift; # PSGI env
         if (...) {
             return 1; # causes the middleware hooked
         }

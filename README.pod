@@ -57,7 +57,8 @@ middlewares. Each middleware can be followed by callback function for
 conditional activation, and attributes for middleware.
 
     my $condition = sub {
-        my $c = shift; # Mojolicious controller
+        my $c   = shift; # Mojolicious controller
+        my $env = shift; # PSGI env
         if (...) {
             return 1; # causes the middleware hooked
         }
@@ -73,6 +74,12 @@ conditional activation, and attributes for middleware.
 $plugin->register;
 
 Register plugin hooks in L<Mojolicious> application.
+
+=head2 psgi_env_to_mojo_req
+
+This is a utility method. This is for internal use.
+
+    my $mojo_req = psgi_env_to_mojo_req($psgi_env)
 
 =head2 mojo_req_to_psgi_env
 
@@ -98,13 +105,13 @@ This is a utility method. This is for internal use.
         'Auth::Basic' => sub {shift->req->url =~ qr{^/?path1/}}, {
             authenticator => sub {
                 my ($user, $pass) = @_;
-                return $user eq 'user1' && $pass eq 'pass';
+                return $username eq 'user1' && $password eq 'pass';
             }
         },
         'Auth::Basic' => sub {shift->req->url =~ qr{^/?path2/}}, {
             authenticator => sub {
                 my ($user, $pass) = @_;
-                return $user eq 'user2' && $pass eq 'pass2';
+                return $username eq 'user2' && $password eq 'pass2';
             }
         },
     ]);
