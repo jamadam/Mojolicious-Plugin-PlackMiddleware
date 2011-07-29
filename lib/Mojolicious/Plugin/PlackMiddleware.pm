@@ -27,8 +27,7 @@ our $VERSION = '0.20';
         while (scalar @mws) {
             my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
             my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
-            my $e = shift @mws;
-            $e = _load_class($e, 'Plack::Middleware');
+            my $e = _load_class(shift @mws, 'Plack::Middleware');
             $plack_app = Mojolicious::Plugin::PlackMiddleware::_Cond->wrap(
                 $plack_app,
                 condition => $cond,
