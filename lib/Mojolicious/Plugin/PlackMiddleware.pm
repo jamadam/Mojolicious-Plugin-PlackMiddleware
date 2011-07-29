@@ -18,7 +18,7 @@ our $VERSION = '0.18';
         my $plack_app = sub {
             my $env = shift;
             my $c = $env->{'MOJO.CONTROLLER'};
-            $c->req(Mojo::Message::Request->new->parse($env));
+            $c->tx->req(Mojo::Message::Request->new->parse($env));
             $on_process_org->($c->app, $c);
             return mojo_res_to_psgi_res($c->res);
         };

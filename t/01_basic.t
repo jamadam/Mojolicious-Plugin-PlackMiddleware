@@ -51,6 +51,32 @@ use utf8;
 				});
 			}
 		}
+    
+    sub req_modified : Test(8) {
+        $ENV{MOJO_MODE} = 'production';
+        my $t = Test::Mojo->new('ReqModified');
+        $t->get_ok('/index')
+			->status_is(200)
+			->content_is('ok');
+    }
+		{
+			package ReqModified;
+			use strict;
+			use warnings;
+			use base 'Mojolicious';
+			
+			sub startup {
+				my $self = shift;
+				
+				$self->plugin('plack_middleware', [
+					'TestFilter4'
+				]);
+				
+				$self->routes->route('/index.html')->to(cb => sub{
+					$_[0]->render_text('ok');
+				});
+			}
+		}
 	
     sub dual_filter : Test(4) {
         $ENV{MOJO_MODE} = 'production';
@@ -315,6 +341,19 @@ use utf8;
 			};
 			$res;
 		});
+	}
+	
+	package Plack::Middleware::TestFilter4;
+	use strict;
+	use warnings;
+	use base qw( Plack::Middleware );
+	
+	sub call {
+		
+		my ($self, $env) = @_;
+		$env->{PATH_INFO} .= '.html';
+		my $res = $self->app->($env);
+		return $res;
 	}
 	
 	package Plack::Middleware::GrowLargeFilter;
