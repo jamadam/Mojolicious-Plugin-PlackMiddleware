@@ -2,7 +2,6 @@ package Mojolicious::Plugin::PlackMiddleware;
 use strict;
 use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
-use Mojo::Server::PSGI;
 use Plack::Util;
 use Mojo::Message::Request;
 our $VERSION = '0.20';
@@ -36,7 +35,6 @@ our $VERSION = '0.20';
         }
         
         $app->on_process(sub {
-            
             my ($app, $c) = @_;
             my $plack_env = mojo_req_to_psgi_env($c->req);
             $plack_env->{'psgi.errors'} =
@@ -52,8 +50,14 @@ our $VERSION = '0.20';
         });
     }
     
+    ### ---
+    ### chunk size
+    ### ---
     use constant CHUNK_SIZE => $ENV{MOJO_CHUNK_SIZE} || 131072;
     
+    ### ---
+    ### convert psgi env to mojo req
+    ### ---
     sub psgi_env_to_mojo_req {
         
         my $env = shift;
@@ -81,7 +85,8 @@ our $VERSION = '0.20';
         my $mojo_req = shift;
         my $url = $mojo_req->url;
         my $base = $url->base;
-        my $body = Mojolicious::Plugin::PlackMiddleware::PSGIInput->new($mojo_req->body);
+        my $body =
+        Mojolicious::Plugin::PlackMiddleware::_PSGIInput->new($mojo_req->body);
         
         my %headers = %{$mojo_req->headers->to_hash};
         for my $key (keys %headers) {
@@ -213,7 +218,10 @@ use parent qw(Plack::Middleware::Conditional);
         }
     }
     
-package Mojolicious::Plugin::PlackMiddleware::PSGIInput;
+### ---
+### PSGI Input handler
+### ---
+package Mojolicious::Plugin::PlackMiddleware::_PSGIInput;
 use strict;
 use warnings;
     
