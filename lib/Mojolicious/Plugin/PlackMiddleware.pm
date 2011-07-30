@@ -345,6 +345,8 @@ This is a utility method. This is for internal use.
 
 =head1 Example
 
+Plack::Middleware::Auth::Basic
+
     $self->plugin(plack_middleware => [
         'Auth::Basic' => sub {shift->req->url =~ qr{^/?path1/}}, {
             authenticator => sub {
@@ -360,6 +362,8 @@ This is a utility method. This is for internal use.
         },
     ]);
 
+Plack::Middleware::ErrorDocument
+
     $self->plugin('plack_middleware', [
         ErrorDocument => {
             500 => "$FindBin::Bin/errors/500.html"
@@ -373,6 +377,8 @@ This is a utility method. This is for internal use.
             root => $FindBin::Bin
         },
     ]);
+
+Plack::Middleware::JSONP
 
     $self->plugin('plack_middleware', [
         JSONP => {callback_key => 'json.p'},
