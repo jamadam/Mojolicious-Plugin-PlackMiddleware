@@ -99,7 +99,7 @@ This is a utility method. This is for internal use.
 
     my $psgi_res = mojo_res_to_psgi_res($mojo_res)
 
-=head1 Example1
+=head1 Example
 
     $self->plugin(plack_middleware => [
         'Auth::Basic' => sub {shift->req->url =~ qr{^/?path1/}}, {
@@ -114,6 +114,24 @@ This is a utility method. This is for internal use.
                 return $username eq 'user2' && $password eq 'pass2';
             }
         },
+    ]);
+
+    $self->plugin('plack_middleware', [
+        ErrorDocument => {
+            500 => "$FindBin::Bin/errors/500.html"
+        },
+        ErrorDocument => {
+            404 => "/errors/404.html",
+            subrequest => 1,
+        },
+        Static => {
+            path => qr{^/errors},
+            root => $FindBin::Bin
+        },
+    ]);
+
+    $self->plugin('plack_middleware', [
+        JSONP => {callback_key => 'json.p'},
     ]);
 
 =head1 AUTHOR
