@@ -49,3 +49,4 @@ mojolicious
 middleware
 middlewares
 plack
+app
