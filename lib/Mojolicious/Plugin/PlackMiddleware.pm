@@ -18,22 +18,23 @@ our $VERSION = '0.20';
         my $plack_app = sub {
             my $env = shift;
             my $c = $env->{'MOJO.CONTROLLER'};
+            my $tx = $c->tx;
             
             ### reset stash & res for multiple on_process invoking
-            {
-                my $stash = $c->stash;
+            my $stash = $c->stash;
+            if ($stash->{'mojo.routed'}) {
                 for my $key (keys %{$stash}) {
                     if ($key =~ qr{^mojo\.}) {
                         delete $stash->{$key};
                     }
                 }
                 delete $stash->{'status'};
-                $c->tx->res(Mojo::Message::Response->new);
+                $tx->res(Mojo::Message::Response->new);
             }
             
-            $c->tx->req(psgi_env_to_mojo_req($env));
+            $tx->req(psgi_env_to_mojo_req($env));
             $on_process_org->($c->app, $c);
-            return mojo_res_to_psgi_res($c->res);
+            return mojo_res_to_psgi_res($tx->res);
         };
         
         my @mws = reverse @$mws;
