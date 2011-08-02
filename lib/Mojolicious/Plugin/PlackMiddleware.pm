@@ -4,6 +4,7 @@ use warnings;
 use Mojo::Base 'Mojolicious::Plugin';
 use Plack::Util;
 use Mojo::Message::Request;
+use Mojo::Message::Response;
 our $VERSION = '0.20';
 
     ### ---
@@ -17,6 +18,19 @@ our $VERSION = '0.20';
         my $plack_app = sub {
             my $env = shift;
             my $c = $env->{'MOJO.CONTROLLER'};
+            
+            ### reset stash & res for multiple on_process invoking
+            {
+                my $stash = $c->stash;
+                for my $key (keys %{$stash}) {
+                    if ($key =~ qr{^mojo\.}) {
+                        delete $stash->{$key};
+                    }
+                }
+                delete $stash->{'status'};
+                $c->tx->res(Mojo::Message::Response->new);
+            }
+            
             $c->tx->req(psgi_env_to_mojo_req($env));
             $on_process_org->($c->app, $c);
             return mojo_res_to_psgi_res($c->res);
