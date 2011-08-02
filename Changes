@@ -2,7 +2,7 @@ Revision history for Mojolicious::Plugin::PlackMiddleware
 
 0.20 2011/07/29
   - Condition callback now gets psgi env for 2nd argument
-  - FIX: Middlewares that invokes app multiple times haven't work propery.
+  - FIX: Middlewares who invoke app multiple times haven't work propery.
 
 0.19 2011/07/29
   - Original request body respected
