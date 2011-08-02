@@ -6,7 +6,11 @@ use Test::More;
 use Test::Mojo;
 use utf8;
 
-    my $backup = $ENV{MOJO_MODE} || '';
+	BEGIN {
+		$ENV{MOJO_NO_BONJOUR} = $ENV{MOJO_NO_IPV6} = 1;
+		$ENV{MOJO_IOWATCHER}  = 'Mojo::IOWatcher';
+		$ENV{MOJO_MODE}       = 'development';
+	}
     
     __PACKAGE__->runtests;
     
@@ -53,10 +57,6 @@ use utf8;
 				});
 			}
 		}
-	
-    END {
-        $ENV{MOJO_MODE} = $backup;
-    }
 
 1;
 
