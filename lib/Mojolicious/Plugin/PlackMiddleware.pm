@@ -5,7 +5,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Plack::Util;
 use Mojo::Message::Request;
 use Mojo::Message::Response;
-our $VERSION = '0.21';
+our $VERSION = '0.22';
 
     ### ---
     ### register
@@ -55,9 +55,7 @@ our $VERSION = '0.21';
             $plack_env->{'psgi.errors'} =
                             Mojolicious::Plugin::PlackMiddleware::_EH->new($c);
             $plack_env->{'MOJO.CONTROLLER'} = $c;
-            my $plack_res = $plack_app->($plack_env);
-            my $mojo_res = psgi_res_to_mojo_res($plack_res);
-            $c->tx->res($mojo_res);
+            $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
             
             if (! $c->stash('mojo.routed')) {
                 $c->rendered;
@@ -123,7 +121,6 @@ our $VERSION = '0.21';
             'REQUEST_URI'       => $url->to_string,
             'QUERY_STRING'      => $url->query->to_string,
             'psgi.url_scheme'   => $base->scheme,
-            'psgi.multithread'  => Plack::Util::FALSE,
             'psgi.version'      => [1,1],
             'psgi.errors'       => *STDERR,
             'psgi.input'        => $body,
