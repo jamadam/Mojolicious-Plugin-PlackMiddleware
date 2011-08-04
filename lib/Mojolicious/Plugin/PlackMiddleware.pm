@@ -6,6 +6,11 @@ use Plack::Util;
 use Mojo::Message::Request;
 use Mojo::Message::Response;
 our $VERSION = '0.22';
+    
+    ### ---
+    ### controller
+    ### ---
+    our $C;
 
     ### ---
     ### register
@@ -17,11 +22,10 @@ our $VERSION = '0.22';
         
         my $plack_app = sub {
             my $env = shift;
-            my $c = $env->{'MOJO.CONTROLLER'};
-            my $tx = $c->tx;
+            my $tx = $C->tx;
             
             ### reset stash & res for multiple on_process invoking
-            my $stash = $c->stash;
+            my $stash = $C->stash;
             if ($stash->{'mojo.routed'}) {
                 for my $key (keys %{$stash}) {
                     if ($key =~ qr{^mojo\.}) {
@@ -33,7 +37,7 @@ our $VERSION = '0.22';
             }
             
             $tx->req(psgi_env_to_mojo_req($env));
-            $on_process_org->($c->app, $c);
+            $on_process_org->($C->app, $C);
             return mojo_res_to_psgi_res($tx->res);
         };
         
@@ -50,15 +54,16 @@ our $VERSION = '0.22';
         }
         
         $app->on_process(sub {
-            my ($app, $c) = @_;
-            my $plack_env = mojo_req_to_psgi_env($c->req);
+            (my $app, local $C) = @_;
+            my $plack_env = mojo_req_to_psgi_env($C->req);
             $plack_env->{'psgi.errors'} =
-                            Mojolicious::Plugin::PlackMiddleware::_EH->new($c);
-            $plack_env->{'MOJO.CONTROLLER'} = $c;
-            $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
+                Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
+                    $app->log->debug(shift);
+                });
+            $C->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
             
-            if (! $c->stash('mojo.routed')) {
-                $c->rendered;
+            if (! $C->stash('mojo.routed')) {
+                $C->rendered;
             }
         });
     }
@@ -201,16 +206,16 @@ our $VERSION = '0.22';
 package Mojolicious::Plugin::PlackMiddleware::_EH;
 use Mojo::Base -base;
     
-    __PACKAGE__->attr('controller');
+    __PACKAGE__->attr('handler');
     
     sub new {
-        my ($class, $c) = @_;
+        my ($class, $handler) = @_;
         my $self = $class->SUPER::new;
-        $self->controller($c);
+        $self->handler($handler);
     }
     
     sub print {
-        shift->controller->app->log->debug(shift);
+        shift->handler->(shift);
     }
 
 ### ---
@@ -223,7 +228,7 @@ use parent qw(Plack::Middleware::Conditional);
     sub call {
         my($self, $env) = @_;
         my $cond = $self->condition;
-        if (! $cond || $cond->($env->{'MOJO.CONTROLLER'}, $env)) {
+        if (! $cond || $cond->($Mojolicious::Plugin::PlackMiddleware::C, $env)) {
             return $self->middleware->($env);
         } else {
             return $self->app->($env);
