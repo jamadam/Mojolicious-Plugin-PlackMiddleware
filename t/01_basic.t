@@ -113,7 +113,36 @@ use utf8;
 			}
 		}
     
-    sub req_modified : Test(8) {
+    sub form_data_multi_part : Test(4) {
+        $ENV{MOJO_MODE} = 'development';
+        my $t = Test::Mojo->new('FormDataMultipart');
+		$t->post_form_ok('/index', '', {foo => 'bar'}, {'Content-Type' => 'multipart/form-data'})
+			->status_is(200);
+    }
+		{
+			package FormDataMultipart;
+			use strict;
+			use warnings;
+			use base 'Mojolicious';
+			use Test::More;
+			
+			sub startup {
+				my $self = shift;
+				
+				$self->plugin('plack_middleware', [
+					'TestFilter'
+				]);
+				
+				$self->routes->route('/index')->to(cb => sub{
+					my $content_type = $_[0]->req->headers->header('content-type');
+					like($content_type, qr{multipart/form-data}, 'right content type');
+					is($_[0]->req->body_params->param('foo'), 'bar', 'right body param');
+					$_[0]->render_text('original');
+				});
+			}
+		}
+    
+    sub req_modified : Test(3) {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('ReqModified');
         $t->get_ok('/index')

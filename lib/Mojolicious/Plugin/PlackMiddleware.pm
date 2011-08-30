@@ -104,7 +104,7 @@ our $VERSION = '0.22';
         my $url = $mojo_req->url;
         my $base = $url->base;
         my $body =
-        Mojolicious::Plugin::PlackMiddleware::_PSGIInput->new($mojo_req->body);
+        Mojolicious::Plugin::PlackMiddleware::_PSGIInput->new($mojo_req->build_body);
         
         my %headers = %{$mojo_req->headers->to_hash};
         for my $key (keys %headers) {
