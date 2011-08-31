@@ -1,6 +1,7 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
 0.22 2011/08/02
+  - Fixed a bug on multipart req body
 
 0.21 2011/08/02
   - Tests fixed for rare invironment
