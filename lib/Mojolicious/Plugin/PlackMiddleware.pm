@@ -244,14 +244,17 @@ use warnings;
     
     sub new {
         my ($class, $content) = @_;
-        return bless [$content, 0], $class;
+        return bless [$content, 0, length($content)], $class;
     }
     
     sub read {
         my $self = shift;
-        if ($_[0] = substr($self->[0], $self->[1], $_[1])) {
-            $self->[1] += $_[1];
-            return 1;
+        my $offset = ($_[2] || $self->[1]);
+        if ($offset <= $self->[2]) {
+            if ($_[0] = substr($self->[0], $offset, $_[1])) {
+                $self->[1] = $offset + length($_[0]);
+                return 1;
+            }
         }
     }
 
