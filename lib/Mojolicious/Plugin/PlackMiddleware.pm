@@ -83,7 +83,7 @@ our $VERSION = '0.23';
         
         # Request body
         my $len = $env->{CONTENT_LENGTH};
-        while (!$req->is_done) {
+        while (!$req->is_finished) {
             my $chunk = ($len && $len < CHUNK_SIZE) ? $len : CHUNK_SIZE;
             my $read = $env->{'psgi.input'}->read(my $buffer, $chunk, 0);
             last unless $read;

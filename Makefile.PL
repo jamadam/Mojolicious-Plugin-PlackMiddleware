@@ -15,7 +15,7 @@ my %params = (
 		'Test::Class' 			=> '0.36',
         'Test::UseAllModules' 	=> '0.10',
         'Plack' 				=> '0.9944',
-        'Mojolicious'    	  	=> '1.65',
+        'Mojolicious'    	  	=> '2.19',
     },
     META_MERGE => {
         resources => {
