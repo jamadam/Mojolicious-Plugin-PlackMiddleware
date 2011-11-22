@@ -169,9 +169,7 @@ our $VERSION = '0.23';
         my $headers = $mojo_res->content->headers;
         my @headers;
         for my $name (@{$headers->names}) {
-            for my $values ($headers->header($name)) {
-                push @headers, $name => $_ for @$values;
-            }
+            push @headers, $name => join ', ', map {$_->[0]} $headers->header($name);
         }
         my @body;
         my $offset = 0;
