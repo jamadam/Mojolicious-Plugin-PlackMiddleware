@@ -55,15 +55,19 @@ our $VERSION = '0.23';
         
         $app->on_process(sub {
             (my $app, local $C) = @_;
-            my $plack_env = mojo_req_to_psgi_env($C->req);
-            $plack_env->{'psgi.errors'} =
-                Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
-                    $app->log->debug(shift);
-                });
-            $C->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
-            
-            if (! $C->stash('mojo.routed')) {
-                $C->rendered;
+            if ($C->tx->req->error) {
+                $on_process_org->($C->app, $C);
+            } else {
+                my $plack_env = mojo_req_to_psgi_env($C->req);
+                $plack_env->{'psgi.errors'} =
+                    Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
+                        $app->log->debug(shift);
+                    });
+                $C->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
+                
+                if (! $C->stash('mojo.routed')) {
+                    $C->rendered;
+                }
             }
         });
     }
