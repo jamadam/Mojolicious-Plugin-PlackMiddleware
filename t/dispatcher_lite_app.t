@@ -18,7 +18,6 @@ plugin plack_middleware => [];
 
 # Wrap whole application
 hook around_dispatch => sub {
-  warn join ',', map{$_||''} caller(2);
   my ($next, $self) = @_;
   return $self->render(text => 'Wrapped again!')
     if $self->req->url->path->contains('/wrap/again');
