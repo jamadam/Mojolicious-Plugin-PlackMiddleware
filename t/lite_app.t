@@ -1,4 +1,3 @@
-#!/usr/bin/env perl
 use Mojo::Base -strict;
 
 use utf8;
@@ -27,9 +26,6 @@ use Mojo::UserAgent;
 use Mojolicious::Lite;
 use Test::Mojo;
 
-# User agent
-my $ua = Mojo::UserAgent->new(ioloop => Mojo::IOLoop->singleton)->app(app);
-
 # Missing plugin
 eval { plugin 'does_not_exist' };
 is $@, "Plugin \"does_not_exist\" missing, maybe you need to install it?\n",
@@ -37,8 +33,6 @@ is $@, "Plugin \"does_not_exist\" missing, maybe you need to install it?\n",
 
 # Default
 app->defaults(default => 23);
-
-plugin plack_middleware => [];
 
 # Test helpers
 helper test_helper  => sub { shift->param(@_) };
@@ -49,6 +43,8 @@ is app->test_helper2, 'Mojolicious::Controller', 'right value';
 
 # Test renderer
 app->renderer->add_handler(dead => sub { die 'renderer works!' });
+
+plugin plack_middleware => [];
 
 # GET /☃
 get '/☃' => sub {
@@ -230,7 +226,7 @@ get ':number' => [number => qr/0/] => sub {
 };
 
 # DELETE /inline/epl
-del '/inline/epl' => sub { shift->render(inline => '<%= 1 + 1%>') };
+del '/inline/epl' => sub { shift->render(inline => '<%= 1 + 1 %> ☃') };
 
 # GET /inline/ep
 get '/inline/ep' =>
@@ -544,6 +540,7 @@ my $t = Test::Mojo->new;
 is $t->app->test_helper2, 'Mojolicious::Controller', 'right class';
 
 # User agent timer
+my $ua  = Mojo::UserAgent->new(ioloop => Mojo::IOLoop->singleton)->app(app);
 my $tua = Mojo::UserAgent->new(ioloop => $ua->ioloop)->app(app);
 my $timer;
 $tua->ioloop->timer(
@@ -927,7 +924,7 @@ $t->get_ok('/0',
 $ENV{MOJO_REVERSE_PROXY} = $backup2;
 
 # DELETE /inline/epl
-$t->delete_ok('/inline/epl')->status_is(200)->content_is("2\n");
+$t->delete_ok('/inline/epl')->status_is(200)->content_is("2 ☃\n");
 
 # GET /inline/ep
 $t->get_ok('/inline/ep?foo=bar')->status_is(200)->content_is("barworks!\n");
@@ -937,7 +934,7 @@ $t->get_ok('/inline/ep/too')->status_is(200)->content_is("0\n");
 
 # GET /inline/ep/partial
 $t->get_ok('/inline/ep/partial')->status_is(200)
-  ->content_is(b("♥just ♥\nworks!\n")->encode);
+  ->content_is("♥just ♥\nworks!\n");
 
 # GET /source
 $t->get_ok('/source')->status_is(200)->content_like(qr#get_ok\('/source#);
