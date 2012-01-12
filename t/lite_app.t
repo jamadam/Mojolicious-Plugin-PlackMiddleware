@@ -9,7 +9,7 @@ BEGIN {
   $ENV{MOJO_MODE}       = 'development';
 }
 
-use Test::More tests => 711;
+use Test::More tests => 715;
 
 # "Wait you're the only friend I have...
 #  You really want a robot for a friend?
@@ -836,7 +836,7 @@ $t->get_ok('/regex/in/template')->status_is(200)
 
 # GET /stream (with basic auth)
 $t->get_ok(
-  $t->test_server->userinfo('sri:foo')->path('/stream')->query(foo => 'bar'))
+  $t->ua->app_url->userinfo('sri:foo')->path('/stream')->query(foo => 'bar'))
   ->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_like(qr#^foobarsri\:foohttp://localhost\:\d+/stream$#);
@@ -892,23 +892,23 @@ $t->get_ok('/0', {'X-Forwarded-For' => '192.168.2.2, 192.168.2.1'})
   ->status_is(200)->content_like(qr#http\://localhost\:\d+/0\-$source\-0#);
 
 # GET /0 (reverse proxy with "X-Forwarded-For")
-my $backup2 = $ENV{MOJO_REVERSE_PROXY};
-$ENV{MOJO_REVERSE_PROXY} = 1;
-$t->get_ok('/0', {'X-Forwarded-For' => '192.168.2.2, 192.168.2.1'})
-  ->status_is(200)
-  ->content_like(qr#http\://localhost\:\d+/0\-192\.168\.2\.1\-0#);
-$ENV{MOJO_REVERSE_PROXY} = $backup2;
+{
+  local $ENV{MOJO_REVERSE_PROXY} = 1;
+  $t->get_ok('/0', {'X-Forwarded-For' => '192.168.2.2, 192.168.2.1'})
+    ->status_is(200)
+    ->content_like(qr#http\://localhost\:\d+/0\-192\.168\.2\.1\-0#);
+}
 
 # GET /0 ("X-Forwarded-Host")
 $t->get_ok('/0', {'X-Forwarded-Host' => 'mojolicio.us:8080'})->status_is(200)
   ->content_like(qr#http\://localhost\:\d+/0\-$source\-0#);
 
 # GET /0 (reverse proxy with "X-Forwarded-Host")
-$backup2 = $ENV{MOJO_REVERSE_PROXY};
-$ENV{MOJO_REVERSE_PROXY} = 1;
-$t->get_ok('/0', {'X-Forwarded-Host' => 'mojolicio.us:8080'})->status_is(200)
-  ->content_is("http://mojolicio.us:8080/0-$source-0");
-$ENV{MOJO_REVERSE_PROXY} = $backup2;
+{
+  local $ENV{MOJO_REVERSE_PROXY} = 1;
+  $t->get_ok('/0', {'X-Forwarded-Host' => 'mojolicio.us:8080'})
+    ->status_is(200)->content_is("http://mojolicio.us:8080/0-$source-0");
+}
 
 # GET /0 ("X-Forwarded-HTTPS" and "X-Forwarded-Host")
 $t->get_ok('/0',
@@ -916,12 +916,12 @@ $t->get_ok('/0',
   ->status_is(200)->content_like(qr#http\://localhost\:\d+/0\-$source\-0#);
 
 # GET /0 (reverse proxy with "X-Forwarded-HTTPS" and "X-Forwarded-Host")
-$backup2 = $ENV{MOJO_REVERSE_PROXY};
-$ENV{MOJO_REVERSE_PROXY} = 1;
-$t->get_ok('/0',
-  {'X-Forwarded-HTTPS' => 1, 'X-Forwarded-Host' => 'mojolicio.us'})
-  ->status_is(200)->content_is("https://mojolicio.us/0-$source-0");
-$ENV{MOJO_REVERSE_PROXY} = $backup2;
+{
+  local $ENV{MOJO_REVERSE_PROXY} = 1;
+  $t->get_ok('/0',
+    {'X-Forwarded-HTTPS' => 1, 'X-Forwarded-Host' => 'mojolicio.us'})
+    ->status_is(200)->content_is("https://mojolicio.us/0-$source-0");
+}
 
 # DELETE /inline/epl
 $t->delete_ok('/inline/epl')->status_is(200)->content_is("2 ☃\n");
@@ -943,12 +943,12 @@ $t->get_ok('/source')->status_is(200)->content_like(qr#get_ok\('/source#);
 $t->get_ok('/source?fail=1')->status_is(404)->content_is('does not exist!');
 
 # GET / (with body and max message size)
-$backup2 = $ENV{MOJO_MAX_MESSAGE_SIZE} || '';
-$ENV{MOJO_MAX_MESSAGE_SIZE} = 1024;
-$t->get_ok('/', '1234' x 1024)->status_is(413)
-  ->content_is(
-  "/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
-$ENV{MOJO_MAX_MESSAGE_SIZE} = $backup2;
+{
+  local $ENV{MOJO_MAX_MESSAGE_SIZE} = 1024;
+  $t->get_ok('/', '1234' x 1024)->status_is(413)
+    ->content_is(
+    "/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
+}
 
 # GET /foo_relaxed/123
 $t->get_ok('/foo_relaxed/123')->status_is(200)->content_is('1230');
@@ -1171,7 +1171,9 @@ is $tx->res->body, '%E1', 'right content';
 $t->get_ok('/json')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_type_is('application/json')
-  ->json_content_is({foo => [1, -2, 3, 'b☃r']});
+  ->json_content_is({foo => [1, -2, 3, 'b☃r']})
+  ->json_is('/foo', [1, -2, 3, 'b☃r'])->json_is('/foo/3', 'b☃r')
+  ->json_has('/foo')->json_hasnt('/bar');
 
 # GET /autostash
 $t->get_ok('/autostash?bar=23')->status_is(200)
@@ -1270,7 +1272,7 @@ $t->get_ok('/static_render')->status_is(200)
   ->content_is('Hello Mojo from a static file!');
 
 # GET /redirect_named (with redirecting enabled in user agent)
-$t->max_redirects(3);
+$t->ua->max_redirects(3);
 $t->get_ok('/redirect_named')->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
@@ -1278,7 +1280,7 @@ $t->get_ok('/redirect_named')->status_is(200)
   ->element_exists_not('#bar')->text_isnt('div' => 'Redirect')
   ->text_is('div' => 'Redirect works!')->text_unlike('[id="foo"]' => qr/Foo/)
   ->text_like('[id="foo"]' => qr/^Redirect/);
-$t->max_redirects(0);
+$t->ua->max_redirects(0);
 Test::Mojo->new->tx($t->tx->previous)->status_is(302)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
