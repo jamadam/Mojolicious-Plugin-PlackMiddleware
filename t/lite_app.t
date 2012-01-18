@@ -9,7 +9,7 @@ BEGIN {
   $ENV{MOJO_MODE}       = 'development';
 }
 
-use Test::More tests => 715;
+use Test::More tests => 721;
 
 # "Wait you're the only friend I have...
 #  You really want a robot for a friend?
@@ -463,8 +463,8 @@ get '/redirect_no_render' => sub {
 # GET /redirect_callback
 get '/redirect_callback' => sub {
   my $self = shift;
-  Mojo::IOLoop->defer(
-    sub {
+  Mojo::IOLoop->timer(
+    0 => sub {
       $self->res->code(301);
       $self->res->body('Whatever!');
       $self->redirect_to('http://127.0.0.1/foo');
@@ -531,6 +531,15 @@ get '/redirect/condition/0' => (redirect => 0) => sub {
 # GET /redirect/condition/1
 get '/redirect/condition/1' => (redirect => 1) =>
   {text => 'condition works too!'};
+
+# GET /url_with
+get '/url_with';
+
+# GET /url_with/*
+get '/url_with/:foo' => sub {
+  my $self = shift;
+  $self->render(text => $self->url_with(foo => 'bar')->to_abs);
+};
 
 # Oh Fry, I love you more than the moon, and the stars,
 # and the POETIC IMAGE NUMBER 137 NOT FOUND
@@ -1385,6 +1394,19 @@ is b($t->tx->res->body)->url_unescape->decode('UTF-8'),
 # GET /favicon.ico (bundled file in DATA section)
 $t->get_ok('/favicon.ico')->status_is(200)->content_is("Not a favicon!\n\n");
 
+# GET /url_with
+$t->get_ok('/url_with?foo=23&bar=24&baz=25')->status_is(200)
+  ->content_is(<<EOF);
+/url_with?bar=24&baz=25&foo=bar
+http://mojolicio.us/test?foo=23&bar=24&baz=25
+/test?bar=24&baz=25
+/bar/23?bar=24&baz=25&foo=yada
+EOF
+
+# GET /url_with/foo
+$t->get_ok('/url_with/foo?foo=bar')->status_is(200)
+  ->content_like(qr|http\://localhost\:\d+/url_with/bar\?foo\=bar|);
+
 # User agent timer
 $tua->ioloop->one_tick('0.1');
 is $timer,
@@ -1497,6 +1519,12 @@ app layout <%= content %><%= app->mode %>
 
 @@ favicon.ico
 Not a favicon!
+
+@@ url_with.html.ep
+%== url_with->query([foo => 'bar'])
+%== url_with('http://mojolicio.us/test')
+%== url_with('/test')->query([foo => undef])
+%== url_with('bartest', test => 23)->query([foo => 'yada'])
 
 __END__
 This is not a template!
