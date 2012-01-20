@@ -107,13 +107,13 @@ Plack::Middleware::Auth::Basic
         'Auth::Basic' => sub {shift->req->url =~ qr{^/?path1/}}, {
             authenticator => sub {
                 my ($user, $pass) = @_;
-                return $username eq 'user1' && $password eq 'pass';
+                return $user eq 'user1' && $pass eq 'pass';
             }
         },
         'Auth::Basic' => sub {shift->req->url =~ qr{^/?path2/}}, {
             authenticator => sub {
                 my ($user, $pass) = @_;
-                return $username eq 'user2' && $password eq 'pass2';
+                return $user eq 'user2' && $pass eq 'pass2';
             }
         },
     ]);
