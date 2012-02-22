@@ -60,7 +60,7 @@ websocket '/bytes' => sub {
   $self->tx->on(
     frame => sub {
       my ($ws, $frame) = @_;
-      $ws->send_message([$frame->[1] == 2 ? 'binary' : 'text', $frame->[2]]);
+      $ws->send_message([$frame->[4] == 2 ? 'binary' : 'text', $frame->[5]]);
     }
   );
   $self->rendered(101);
@@ -164,10 +164,10 @@ $t->websocket_ok('/unicode')->send_message_ok('hello again')
 my $bytes = b("I ♥ Mojolicious")->encode('UTF-16LE')->to_string;
 $t->websocket_ok('/bytes');
 my $binary;
-my $cb = $t->tx->on(
+$t->tx->on(
   frame => sub {
     my ($ws, $frame) = @_;
-    $binary++ if $frame->[1] == 2;
+    $binary++ if $frame->[4] == 2;
   }
 );
 $t->send_message_ok([binary => $bytes])->message_is($bytes);

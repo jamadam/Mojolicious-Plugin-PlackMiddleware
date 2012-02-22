@@ -8,11 +8,6 @@ use Mojo::Message::Response;
 our $VERSION = '0.23';
     
     ### ---
-    ### controller
-    ### ---
-    our $C;
-
-    ### ---
     ### register
     ### ---
     sub register {
@@ -21,26 +16,27 @@ our $VERSION = '0.23';
         my $inside_app;
         
         my $plack_app = sub {
-            my $retry = $C->stash('mojo.routed') // 0;
             my $env = shift;
-            my $tx = $C->tx;
+            my $c = $env->{'mojo.c'};
+            my $tx = $c->tx;
+            my $retry = $c->stash('mojo.routed') || 0;
             
             if ($retry) {
                 ### reset stash & res for multiple on_process invoking
-                my $stash = $C->stash;
+                my $stash = $c->stash;
                 for my $key (keys %{$stash}) {
                     if ($key =~ qr{^mojo\.}) {
                         delete $stash->{$key};
                     }
                 }
                 delete $stash->{'status'};
+                my $sever = $tx->res->headers->header('server');
                 $tx->res(Mojo::Message::Response->new);
-                $tx->res->headers->header('server', 'Mojolicious (Perl)');
+                $tx->res->headers->header('server', $sever);
             }
             
             $tx->req(psgi_env_to_mojo_req($env));
             $inside_app->($retry * -1);
-            $retry = 1;
             return mojo_res_to_psgi_res($tx->res);
         };
             
@@ -57,23 +53,26 @@ our $VERSION = '0.23';
         }
         
         $app->hook('around_dispatch' => sub {
-            ($inside_app, local $C) = @_;
+            ($inside_app, my $c) = @_;
             
-            if ($C->tx->req->error) {
+            if ($c->tx->req->error) {
                 $inside_app->();
                 return;
             }
             
-            my $plack_env = mojo_req_to_psgi_env($C->req);
+            my $plack_env = mojo_req_to_psgi_env($c->req);
+            
+            $plack_env->{'mojo.c'} = $c;
             
             $plack_env->{'psgi.errors'} =
                 Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
                     $app->log->debug(shift);
                 });
-            $C->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
             
-            if (! $C->stash('mojo.routed')) {
-                $C->rendered;
+            $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
+            
+            if (! $c->stash('mojo.routed')) {
+                $c->rendered;
             }
         });
     }
@@ -236,7 +235,7 @@ use parent qw(Plack::Middleware::Conditional);
     sub call {
         my($self, $env) = @_;
         my $cond = $self->condition;
-        if (! $cond || $cond->($Mojolicious::Plugin::PlackMiddleware::C, $env)) {
+        if (! $cond || $cond->($env->{'mojo.c'}, $env)) {
             return $self->middleware->($env);
         } else {
             return $self->app->($env);
