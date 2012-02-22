@@ -18,13 +18,14 @@ our $VERSION = '0.23';
     sub register {
         my ($self, $app, $mws) = @_;
         
-        $app->hook('around_dispatch' => sub {
-            (my $next, local $C) = @_;
-            my $retry = 0;
-            my $plack_app = sub {
-                my $env = shift;
-                my $tx = $C->tx;
-                
+        my $inside_app;
+        
+        my $plack_app = sub {
+            my $retry = $C->stash('mojo.routed') // 0;
+            my $env = shift;
+            my $tx = $C->tx;
+            
+            if ($retry) {
                 ### reset stash & res for multiple on_process invoking
                 my $stash = $C->stash;
                 for my $key (keys %{$stash}) {
@@ -35,37 +36,44 @@ our $VERSION = '0.23';
                 delete $stash->{'status'};
                 $tx->res(Mojo::Message::Response->new);
                 $tx->res->headers->header('server', 'Mojolicious (Perl)');
-                $tx->req(psgi_env_to_mojo_req($env));
-                $next->($retry * -1);
-                $retry = 1;
-                return mojo_res_to_psgi_res($tx->res);
-            };
-            
-            my @mws = reverse @$mws;
-            while (scalar @mws) {
-                my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
-                my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
-                my $e = _load_class(shift @mws, 'Plack::Middleware');
-                $plack_app = Mojolicious::Plugin::PlackMiddleware::_Cond->wrap(
-                    $plack_app,
-                    condition => $cond,
-                    builder => sub {$e->wrap($_[0], %$args)},
-                );
             }
             
+            $tx->req(psgi_env_to_mojo_req($env));
+            $inside_app->($retry * -1);
+            $retry = 1;
+            return mojo_res_to_psgi_res($tx->res);
+        };
+            
+        my @mws = reverse @$mws;
+        while (scalar @mws) {
+            my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
+            my $cond = (ref $mws[0] eq 'CODE') ? shift @mws : undef;
+            my $e = _load_class(shift @mws, 'Plack::Middleware');
+            $plack_app = Mojolicious::Plugin::PlackMiddleware::_Cond->wrap(
+                $plack_app,
+                condition => $cond,
+                builder => sub {$e->wrap($_[0], %$args)},
+            );
+        }
+        
+        $app->hook('around_dispatch' => sub {
+            ($inside_app, local $C) = @_;
+            
             if ($C->tx->req->error) {
-                $next->();
-            } else {
-                my $plack_env = mojo_req_to_psgi_env($C->req);
-                $plack_env->{'psgi.errors'} =
-                    Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
-                        $app->log->debug(shift);
-                    });
-                $C->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
-                
-                if (! $C->stash('mojo.routed')) {
-                    $C->rendered;
-                }
+                $inside_app->();
+                return;
+            }
+            
+            my $plack_env = mojo_req_to_psgi_env($C->req);
+            
+            $plack_env->{'psgi.errors'} =
+                Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
+                    $app->log->debug(shift);
+                });
+            $C->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
+            
+            if (! $C->stash('mojo.routed')) {
+                $C->rendered;
             }
         });
     }
