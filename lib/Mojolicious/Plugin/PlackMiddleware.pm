@@ -6,8 +6,6 @@ use Plack::Util;
 use Mojo::Message::Request;
 use Mojo::Message::Response;
 our $VERSION = '0.23';
-
-    our $_ROUTED;
     
     ### ---
     ### register
@@ -24,7 +22,7 @@ our $VERSION = '0.23';
             
             $tx->req(psgi_env_to_mojo_req($env));
             
-            if ($_ROUTED) {
+            if ($env->{'mojo.routed'}) {
                 my $stash = $c->stash;
                 for my $key (grep {$_ =~ qr{^mojo\.}} keys %{$stash}) {
                     delete $stash->{$key};
@@ -36,7 +34,7 @@ our $VERSION = '0.23';
                 $c->app->handler($c);
             } else {
                 $inside_app->();
-                $_ROUTED = 1;
+                $env->{'mojo.routed'} = 1;
             }
             
             return mojo_res_to_psgi_res($tx->res);
@@ -71,11 +69,9 @@ our $VERSION = '0.23';
                     $plack_env->{'mojo.c'}->app->log->debug(shift);
                 });
             
-            local $_ROUTED;
-            
             $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
             
-            if (! $_ROUTED) {
+            if (! $plack_env->{'mojo.routed'}) {
                 $c->rendered;
             }
         });
