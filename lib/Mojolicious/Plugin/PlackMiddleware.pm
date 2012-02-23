@@ -36,7 +36,11 @@ our $VERSION = '0.23';
             }
             
             $tx->req(psgi_env_to_mojo_req($env));
-            $inside_app->($retry * -1);
+            if ($retry) {
+                $c->app->handler($c);
+            } else {
+                $inside_app->();
+            }
             return mojo_res_to_psgi_res($tx->res);
         };
             
