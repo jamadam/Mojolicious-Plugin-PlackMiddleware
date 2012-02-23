@@ -6,6 +6,8 @@ use Plack::Util;
 use Mojo::Message::Request;
 use Mojo::Message::Response;
 our $VERSION = '0.23';
+
+    our $_ROUTED;
     
     ### ---
     ### register
@@ -19,28 +21,24 @@ our $VERSION = '0.23';
             my $env = shift;
             my $c = $env->{'mojo.c'};
             my $tx = $c->tx;
-            my $retry = $c->stash('mojo.routed') || 0;
             
-            if ($retry) {
-                ### reset stash & res for multiple on_process invoking
+            $tx->req(psgi_env_to_mojo_req($env));
+            
+            if ($_ROUTED) {
                 my $stash = $c->stash;
-                for my $key (keys %{$stash}) {
-                    if ($key =~ qr{^mojo\.}) {
-                        delete $stash->{$key};
-                    }
+                for my $key (grep {$_ =~ qr{^mojo\.}} keys %{$stash}) {
+                    delete $stash->{$key};
                 }
                 delete $stash->{'status'};
                 my $sever = $tx->res->headers->header('server');
                 $tx->res(Mojo::Message::Response->new);
                 $tx->res->headers->header('server', $sever);
-            }
-            
-            $tx->req(psgi_env_to_mojo_req($env));
-            if ($retry) {
                 $c->app->handler($c);
             } else {
                 $inside_app->();
+                $_ROUTED = 1;
             }
+            
             return mojo_res_to_psgi_res($tx->res);
         };
             
@@ -73,9 +71,11 @@ our $VERSION = '0.23';
                     $plack_env->{'mojo.c'}->app->log->debug(shift);
                 });
             
+            local $_ROUTED;
+            
             $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
             
-            if (! $c->stash('mojo.routed')) {
+            if (! $_ROUTED) {
                 $c->rendered;
             }
         });
