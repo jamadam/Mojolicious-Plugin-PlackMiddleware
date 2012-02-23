@@ -70,7 +70,7 @@ our $VERSION = '0.23';
             
             $plack_env->{'psgi.errors'} =
                 Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
-                    $app->log->debug(shift);
+                    $plack_env->{'mojo.c'}->app->log->debug(shift);
                 });
             
             $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
