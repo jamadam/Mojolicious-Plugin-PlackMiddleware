@@ -1,7 +1,6 @@
 package Template_Basic;
 use strict;
 use warnings;
-use base 'Test::Class';
 use Test::More;
 use Test::Mojo;
 use utf8;
@@ -12,9 +11,9 @@ use utf8;
 		$ENV{MOJO_MODE}       = 'development';
 	}
     
-    __PACKAGE__->runtests;
+	use Test::More tests => 6;
     
-    sub single_filter : Test(6) {
+    {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('SomeApp');
         $t->get_ok('/status/500.html')
