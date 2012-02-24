@@ -1,7 +1,6 @@
 package Template_Basic;
 use strict;
 use warnings;
-use base 'Test::Class';
 use Test::More;
 use Test::Mojo;
 use utf8;
@@ -12,31 +11,32 @@ use utf8;
 		$ENV{MOJO_MODE}       = 'development';
 	}
     
-    __PACKAGE__->runtests;
+	use Test::More tests => 56;
     
-    sub single_filter : Test(8) {
-        $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new('SomeApp');
-        $t->get_ok('/index')
+	{
+		$ENV{MOJO_MODE} = 'production';
+		my $t = Test::Mojo->new('SomeApp');
+		$t->get_ok('/index')
 			->status_is(200)
 			->header_is('Content-length', 18)
 			->content_is('original[filtered]');
-        $t->get_ok('/css.css')
+		$t->get_ok('/css.css')
 			->status_is(200)
 			->header_is('Content-length', 13)
 			->content_is('css[filtered]');
-    }
+	}
     
-    sub multipart : Test(1) {
-        $ENV{MOJO_MODE} = 'production';
-        my $t = Test::Mojo->new('SomeApp');
+	{
+		$ENV{MOJO_MODE} = 'production';
+		my $t = Test::Mojo->new('SomeApp');
 		local $SIG{ALRM} = sub { die "timeout\n" }; alarm 2;
 		$t->tx($t->ua->get('/index',
 			{'Content-Type' => 'multipart/form-data; boundary="abcdefg"'},
 			"\x0d\x0a\x0d\x0acontent\x0d\x0a--abcdefg--\x0d\x0a")
 		);
 		$t->content_is('original[filtered]');
-    }
+	}
+	
 		{
 			package SomeApp;
 			use strict;
@@ -56,7 +56,7 @@ use utf8;
 			}
 		}
     
-    sub on_process_twice : Test(3) {
+    {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('OnProcessTwice');
         $t->get_ok('/index1')
@@ -85,7 +85,7 @@ use utf8;
 			}
 		}
     
-    sub form_data : Test(3) {
+    {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('FormData');
 		$t->post_form_ok('/index' => {a => 'b'});
@@ -113,7 +113,7 @@ use utf8;
 			}
 		}
     
-    sub form_data_multi_part : Test(4) {
+    {
         $ENV{MOJO_MODE} = 'development';
         my $t = Test::Mojo->new('FormDataMultipart');
 		$t->post_form_ok('/index', '', {foo => 'bar'}, {'Content-Type' => 'multipart/form-data'})
@@ -142,7 +142,7 @@ use utf8;
 			}
 		}
     
-    sub req_modified : Test(3) {
+    {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('ReqModified');
         $t->get_ok('/index')
@@ -168,7 +168,7 @@ use utf8;
 			}
 		}
 	
-    sub dual_filter : Test(4) {
+    {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('SomeApp2');
         $t->get_ok('/index')
@@ -196,7 +196,7 @@ use utf8;
 			}
 		}
     
-    sub with_args : Test(4) {
+    {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('SomeApp3');
         $t->get_ok('/index')
@@ -223,7 +223,7 @@ use utf8;
 			}
 		}
 	
-    sub body_grows_largely : Test(4) {
+    {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('GrowLarge');
         $t->get_ok('/index')
@@ -250,7 +250,7 @@ use utf8;
 			}
 		}
 	
-	sub HeadModified : Test(5) {
+	{
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('HeadModified');
         $t->get_ok('/index')
@@ -278,7 +278,7 @@ use utf8;
 			}
 		}
 	
-	sub enable_if_false : Test(4) {
+	{
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('EnableIfFalse');
         $t->get_ok('/index')
@@ -305,7 +305,7 @@ use utf8;
 			}
 		}
 	
-	sub enable_if_true : Test(5) {
+	{
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('EnableIfTrue');
         $t->get_ok('/index')
@@ -338,7 +338,7 @@ use utf8;
 			}
 		}
 	
-	sub auth : Test(8) {
+	{
         $ENV{MOJO_MODE} = 'production';
 		
         my $t = Test::Mojo->new('AppRejected');
@@ -371,11 +371,11 @@ use utf8;
 				});
 			}
 		}
-	
-	package Plack::Middleware::TestFilter;
-	use strict;
-	use warnings;
-	use base qw( Plack::Middleware );
+
+package Plack::Middleware::TestFilter;
+use strict;
+use warnings;
+use base qw( Plack::Middleware );
 	
 	sub call {
 		
@@ -390,11 +390,11 @@ use utf8;
 			$res;
 		});
 	}
-	
-	package Plack::Middleware::TestFilter2;
-	use strict;
-	use warnings;
-	use base qw( Plack::Middleware );
+
+package Plack::Middleware::TestFilter2;
+use strict;
+use warnings;
+use base qw( Plack::Middleware );
 	
 	sub call {
 		
@@ -409,11 +409,11 @@ use utf8;
 			$res;
 		});
 	}
-	
-	package Plack::Middleware::TestFilter3;
-	use strict;
-	use warnings;
-	use base qw( Plack::Middleware );
+
+package Plack::Middleware::TestFilter3;
+use strict;
+use warnings;
+use base qw( Plack::Middleware );
 	
 	sub call {
 		
@@ -428,11 +428,11 @@ use utf8;
 			$res;
 		});
 	}
-	
-	package Plack::Middleware::TestFilter4;
-	use strict;
-	use warnings;
-	use base qw( Plack::Middleware );
+
+package Plack::Middleware::TestFilter4;
+use strict;
+use warnings;
+use base qw( Plack::Middleware );
 	
 	sub call {
 		
@@ -441,11 +441,11 @@ use utf8;
 		my $res = $self->app->($env);
 		return $res;
 	}
-	
-	package Plack::Middleware::GrowLargeFilter;
-	use strict;
-	use warnings;
-	use base qw( Plack::Middleware );
+
+package Plack::Middleware::GrowLargeFilter;
+use strict;
+use warnings;
+use base qw( Plack::Middleware );
 	
 	sub call {
 		
@@ -461,46 +461,46 @@ use utf8;
 		});
 	}
 
-	package Plack::Middleware::ForceCharset;
-	use strict;
-	use warnings;
-	use 5.008_001;
-	use parent qw(Plack::Middleware);
-	use Plack::Util;
-	use Plack::Util::Accessor qw(charset);
-	use Encode;
-	
+package Plack::Middleware::ForceCharset;
+use strict;
+use warnings;
+use 5.008_001;
+use parent qw(Plack::Middleware);
+use Plack::Util;
+use Plack::Util::Accessor qw(charset);
+use Encode;
+
 	our $VERSION = '0.02';
-		
-		sub call {
-			my ($self, $env) = @_;
-			$self->response_cb($self->app->($env), sub {
-				my $res = shift;
-				my $h = Plack::Util::headers($res->[1]);
-				my $charset_from = 'UTF-8';
-				my $charset_to = $self->charset;
-				my $ct = $h->get('Content-Type');
-				if ($ct =~ s{;?\s*charset=([^;\$]+)}{}) {
-					$charset_from = $1;
-				}
-				if ($ct =~ qr{^text/(html|plain)}) {
-					$h->set('Content-Type', $ct. ';charset='. $charset_to);
-				}
-				my $fixed_body = [];
-				Plack::Util::foreach($res->[2], sub {
-					Encode::from_to($_[0], $charset_from, $charset_to);
-					push @$fixed_body, $_[0];
-				});
-				$res->[2] = $fixed_body;
-				$h->set('Content-Length', length $fixed_body);
-				return $res;
-			});
-		}
 	
-	package Plack::Middleware::InvokeAppTwice;
-	use strict;
-	use warnings;
-	use base qw( Plack::Middleware );
+	sub call {
+		my ($self, $env) = @_;
+		$self->response_cb($self->app->($env), sub {
+			my $res = shift;
+			my $h = Plack::Util::headers($res->[1]);
+			my $charset_from = 'UTF-8';
+			my $charset_to = $self->charset;
+			my $ct = $h->get('Content-Type');
+			if ($ct =~ s{;?\s*charset=([^;\$]+)}{}) {
+				$charset_from = $1;
+			}
+			if ($ct =~ qr{^text/(html|plain)}) {
+				$h->set('Content-Type', $ct. ';charset='. $charset_to);
+			}
+			my $fixed_body = [];
+			Plack::Util::foreach($res->[2], sub {
+				Encode::from_to($_[0], $charset_from, $charset_to);
+				push @$fixed_body, $_[0];
+			});
+			$res->[2] = $fixed_body;
+			$h->set('Content-Length', length $fixed_body);
+			return $res;
+		});
+	}
+
+package Plack::Middleware::InvokeAppTwice;
+use strict;
+use warnings;
+use base qw( Plack::Middleware );
 	
 	sub call {
 		

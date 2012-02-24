@@ -2,10 +2,11 @@ package Template_Basic;
 use strict;
 use warnings;
 use utf8;
-use base 'Test::Class';
 use Test::More;
 use Test::Mojo;
 use Mojolicious::Plugin::PlackMiddleware;
+
+use Test::More tests => 9;
 
 {
 	my $ioh = Mojolicious::Plugin::PlackMiddleware::_PSGIInput->new('543');
@@ -37,8 +38,6 @@ use Mojolicious::Plugin::PlackMiddleware;
 	$ioh->read($buf, 2, 3);
 	is($buf, 'de');
 }
-
-plan tests => 9;
 
 1;
 
