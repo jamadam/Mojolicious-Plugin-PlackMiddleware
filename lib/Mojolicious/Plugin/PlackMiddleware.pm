@@ -278,14 +278,13 @@ Mojolicious::Plugin::PlackMiddleware - Plack::Middleware inside Mojolicious
     # Mojolicious
     
     sub startup {
-        
         my $self = shift;
         
         $self->plugin(plack_middleware => [
             'MyMiddleware1', 
             'MyMiddleware2', {arg1 => 'some_vale'},
-            'MyMiddleware3', sub {$condition}, 
-            'MyMiddleware4', sub {$condition}, {arg1 => 'some_vale'}
+            'MyMiddleware3', $condition_code_ref, 
+            'MyMiddleware4', $condition_code_ref, {arg1 => 'some_value'}
         ]);
     }
     
@@ -294,8 +293,8 @@ Mojolicious::Plugin::PlackMiddleware - Plack::Middleware inside Mojolicious
     plugin plack_middleware => [
         'MyMiddleware1', 
         'MyMiddleware2', {arg1 => 'some_vale'},
-        'MyMiddleware3', sub {$condition}, 
-        'MyMiddleware4', sub {$condition}, {arg1 => 'some_vale'}
+        'MyMiddleware3', $condition_code_ref, 
+        'MyMiddleware4', $condition_code_ref, {arg1 => 'some_value'}
     ];
     
     package Plack::Middleware::MyMiddleware1;
@@ -305,17 +304,21 @@ Mojolicious::Plugin::PlackMiddleware - Plack::Middleware inside Mojolicious
     
     sub call {
         my($self, $env) = @_;
+        
         # pre-processing $env
+        
         my $res = $self->app->($env);
+        
         # post-processing $res
+        
         return $res;
     }
   
 =head1 DESCRIPTION
 
 Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
-inside Mojolicious by wrapping on_proccess so that the portability of your app
-covers pre/post process too.
+inside Mojolicious using around_dispatch hook so that the portability of your
+app covers pre/post process too.
 
 It also aimed at those who used to Mojolicious bundle servers.
 Note that if you can run your application on a plack server, there is proper
@@ -335,7 +338,7 @@ conditional activation, and attributes for middleware.
         }
     };
     plugin plack_middleware => [
-        Plack::Middleware::MyMiddleware, $condition, {arg1 => 'some_vale'},
+        Plack::Middleware::MyMiddleware, $condition, {arg1 => 'some_value'},
     ];
 
 =head1 METHODS

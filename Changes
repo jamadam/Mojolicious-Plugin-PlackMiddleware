@@ -1,7 +1,9 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
 0.23 2011/09/01
-  - Depended on Mojolicious v2.19
+  - Depended on Mojolicious v2.51
+  - Stoped using on_dispatch in favor of around_dispatch.
+  - Stoped refering to internal stash values.
 
 0.22 2011/08/31
   - Fixed a bug on multipart req body
