@@ -1,6 +1,6 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
-0.23 2011/09/01
+0.23 2012/02/024
   - Depended on Mojolicious v2.51
   - Stoped using on_dispatch in favor of around_dispatch.
   - Stoped refering to internal stash values.
