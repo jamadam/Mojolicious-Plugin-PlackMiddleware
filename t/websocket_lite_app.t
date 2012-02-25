@@ -24,7 +24,7 @@ websocket '/echo' => sub {
   $self->on(
     message => sub {
       my ($self, $message) = @_;
-      $self->send_message("echo: $message");
+      $self->send("echo: $message");
     }
   );
 };
@@ -38,8 +38,7 @@ get '/plain' => {text => 'Nothing to see here!'};
 # WebSocket /push
 websocket '/push' => sub {
   my $self = shift;
-  my $id =
-    Mojo::IOLoop->recurring('0.5' => sub { $self->send_message('push') });
+  my $id = Mojo::IOLoop->recurring('0.5' => sub { $self->send('push') });
   $self->on(finish => sub { Mojo::IOLoop->drop($id) });
 };
 
@@ -49,7 +48,7 @@ websocket '/unicode' => sub {
   $self->on(
     message => sub {
       my ($self, $message) = @_;
-      $self->send_message("♥: $message");
+      $self->send("♥: $message");
     }
   );
 };
@@ -60,7 +59,7 @@ websocket '/bytes' => sub {
   $self->tx->on(
     frame => sub {
       my ($ws, $frame) = @_;
-      $ws->send_message([$frame->[4] == 2 ? 'binary' : 'text', $frame->[5]]);
+      $ws->send({$frame->[4] == 2 ? 'binary' : 'text', $frame->[5]});
     }
   );
   $self->rendered(101);
@@ -72,13 +71,13 @@ websocket '/once' => sub {
   $self->on(
     message => sub {
       my ($self, $message) = @_;
-      $self->send_message("ONE: $message");
+      $self->send("ONE: $message");
     }
   );
   $self->tx->once(
     message => sub {
       my ($tx, $message) = @_;
-      $self->send_message("TWO: $message");
+      $self->send("TWO: $message");
     }
   );
 };
@@ -92,7 +91,7 @@ websocket sub {
   $self->on(
     message => sub {
       my ($self, $message) = @_;
-      $self->send_message("nested echo: $message");
+      $self->send("nested echo: $message");
     }
   );
 };
@@ -110,17 +109,16 @@ post {data => 'plain nested too!'};
 my $t = Test::Mojo->new;
 
 # WebSocket /echo
-$t->websocket_ok('/echo')->send_message_ok('hello')->message_is('echo: hello')
+$t->websocket_ok('/echo')->send_ok('hello')->message_is('echo: hello')
   ->finish_ok;
 
 # WebSocket /echo (multiple times)
-$t->websocket_ok('/echo')->send_message_ok('hello again')
-  ->message_is('echo: hello again')->send_message_ok('and one more time')
+$t->websocket_ok('/echo')->send_ok('hello again')
+  ->message_is('echo: hello again')->send_ok('and one more time')
   ->message_is('echo: and one more time')->finish_ok;
 
 # WebSocket /echo (zero)
-$t->websocket_ok('/echo')->send_message_ok(0)->message_is('echo: 0')
-  ->finish_ok;
+$t->websocket_ok('/echo')->send_ok(0)->message_is('echo: 0')->finish_ok;
 
 # GET /echo (plain alternative)
 $t->get_ok('/echo')->status_is(200)->content_is('plain echo!');
@@ -140,24 +138,24 @@ $t->websocket_ok('/push')->message_unlike(qr/shift/)->message_isnt('shift')
 $t->get_ok('/plain')->status_is(200)->content_is('Nothing to see here!');
 
 # WebSocket /echo (again)
-$t->websocket_ok('/echo')->send_message_ok('hello')->message_is('echo: hello')
+$t->websocket_ok('/echo')->send_ok('hello')->message_is('echo: hello')
   ->finish_ok;
 
 # WebSocket /echo (mixed)
-$t->websocket_ok('/echo')->send_message_ok('this')->send_message_ok('just')
-  ->send_message_ok('works')->message_is('echo: this')
-  ->message_is('echo: just')->message_is('echo: works')->finish_ok;
+$t->websocket_ok('/echo')->send_ok('this')->send_ok('just')->send_ok('works')
+  ->message_is('echo: this')->message_is('echo: just')
+  ->message_is('echo: works')->finish_ok;
 
 # GET /plain (and again)
 $t->get_ok('/plain')->status_is(200)->content_is('Nothing to see here!');
 
 # WebSocket /unicode
-$t->websocket_ok('/unicode')->send_message_ok('hello')
-  ->message_is('♥: hello')->finish_ok;
+$t->websocket_ok('/unicode')->send_ok('hello')->message_is('♥: hello')
+  ->finish_ok;
 
 # WebSocket /unicode (multiple times)
-$t->websocket_ok('/unicode')->send_message_ok('hello again')
-  ->message_is('♥: hello again')->send_message_ok('and one ☃ more time')
+$t->websocket_ok('/unicode')->send_ok('hello again')
+  ->message_is('♥: hello again')->send_ok('and one ☃ more time')
   ->message_is('♥: and one ☃ more time')->finish_ok;
 
 # WebSocket /bytes (binary frame and frame event)
@@ -170,25 +168,23 @@ $t->tx->on(
     $binary++ if $frame->[4] == 2;
   }
 );
-$t->send_message_ok([binary => $bytes])->message_is($bytes);
+$t->send_ok({binary => $bytes})->message_is($bytes);
 ok $binary, 'received binary frame';
 $binary = undef;
-$t->send_message_ok([text => $bytes])->message_is($bytes)->finish_ok;
+$t->send_ok({text => $bytes})->message_is($bytes)->finish_ok;
 ok !$binary, 'received text frame';
 
 # WebSocket /bytes (multiple times)
-$t->websocket_ok('/bytes')->send_message_ok([binary => $bytes])
-  ->message_is($bytes)->send_message_ok([binary => $bytes])
-  ->message_is($bytes)->finish_ok;
+$t->websocket_ok('/bytes')->send_ok({binary => $bytes})->message_is($bytes)
+  ->send_ok({binary => $bytes})->message_is($bytes)->finish_ok;
 
 # WebSocket /once
-$t->websocket_ok('/once')->send_message_ok('hello')->message_is('ONE: hello')
-  ->message_is('TWO: hello')->send_message_ok('hello')
-  ->message_is('ONE: hello')->send_message_ok('hello')
-  ->message_is('ONE: hello')->finish_ok;
+$t->websocket_ok('/once')->send_ok('hello')->message_is('ONE: hello')
+  ->message_is('TWO: hello')->send_ok('hello')->message_is('ONE: hello')
+  ->send_ok('hello')->message_is('ONE: hello')->finish_ok;
 
 # WebSocket /nested
-$t->websocket_ok('/nested')->send_message_ok('hello')
+$t->websocket_ok('/nested')->send_ok('hello')
   ->message_is('nested echo: hello')->finish_ok;
 
 # GET /nested (plain alternative)

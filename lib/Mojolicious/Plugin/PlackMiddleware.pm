@@ -31,7 +31,7 @@ our $VERSION = '0.23';
                 my $sever = $tx->res->headers->header('server');
                 $tx->res(Mojo::Message::Response->new);
                 $tx->res->headers->header('server', $sever);
-                $c->app->handler($c);
+                $inside_app->();
             } else {
                 $inside_app->();
                 $env->{'mojo.routed'} = 1;
