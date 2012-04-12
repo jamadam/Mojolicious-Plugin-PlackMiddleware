@@ -4,12 +4,12 @@ use utf8;
 
 # Disable Bonjour, IPv6 and libev
 BEGIN {
-  $ENV{MOJO_NO_BONJOUR} = $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_IOWATCHER}  = 'Mojo::IOWatcher';
   $ENV{MOJO_MODE}       = 'development';
+  $ENV{MOJO_NO_BONJOUR} = $ENV{MOJO_NO_IPV6} = 1;
+  $ENV{MOJO_REACTOR}    = 'Mojo::Reactor::Poll';
 }
 
-use Test::More tests => 721;
+use Test::More tests => 703;
 
 # "Wait you're the only friend I have...
 #  You really want a robot for a friend?
@@ -249,7 +249,8 @@ get '/inline/ep/partial' => sub {
 get '/source' => sub {
   my $self = shift;
   my $file = $self->param('fail') ? 'does_not_exist.txt' : '../lite_app.t';
-  $self->render_static($file)
+  $self->render('this_does_not_ever_exist')
+    or $self->render_static($file)
     or $self->render_text('does not exist!', status => 404);
 };
 
@@ -338,9 +339,6 @@ get '/layout' => sub {
 # POST /template
 post '/template' => 'index';
 
-# GET /memorized
-get '/memorized' => 'memorized';
-
 # * /something
 any '/something' => sub {
   my $self = shift;
@@ -365,8 +363,8 @@ post '/bar/:test' => {test => 'default'} => sub {
   $self->render_text($self->stash('test'));
 };
 
-# GET /firefox/*
-get '/firefox/:stuff' => (agent => qr/Firefox/) => sub {
+# PATCH /firefox/*
+patch '/firefox/:stuff' => (agent => qr/Firefox/) => sub {
   my $self = shift;
   $self->render_text($self->url_for('foxy', stuff => 'foo'));
 } => 'foxy';
@@ -539,6 +537,13 @@ get '/url_with';
 get '/url_with/:foo' => sub {
   my $self = shift;
   $self->render(text => $self->url_with(foo => 'bar')->to_abs);
+};
+
+# GET /dynamic/inline
+my $dynamic_inline = 1;
+get '/dynamic/inline' => sub {
+  my $self = shift;
+  $self->render(inline => 'dynamic inline ' . $dynamic_inline++);
 };
 
 # Oh Fry, I love you more than the moon, and the stars,
@@ -900,6 +905,10 @@ my $source = $t->tx->local_address;
 $t->get_ok('/0', {'X-Forwarded-For' => '192.168.2.2, 192.168.2.1'})
   ->status_is(200)->content_like(qr#http\://localhost\:\d+/0\-$source\-0#);
 
+# GET /0 ("X-Forwarded-HTTPS")
+$t->get_ok('/0', {'X-Forwarded-HTTPS' => 1})->status_is(200)
+  ->content_like(qr#http\://localhost\:\d+/0\-$source\-0#);
+
 # GET /0 (reverse proxy with "X-Forwarded-For")
 {
   local $ENV{MOJO_REVERSE_PROXY} = 1;
@@ -908,28 +917,11 @@ $t->get_ok('/0', {'X-Forwarded-For' => '192.168.2.2, 192.168.2.1'})
     ->content_like(qr#http\://localhost\:\d+/0\-192\.168\.2\.1\-0#);
 }
 
-# GET /0 ("X-Forwarded-Host")
-$t->get_ok('/0', {'X-Forwarded-Host' => 'mojolicio.us:8080'})->status_is(200)
-  ->content_like(qr#http\://localhost\:\d+/0\-$source\-0#);
-
-# GET /0 (reverse proxy with "X-Forwarded-Host")
+# GET /0 (reverse proxy with "X-Forwarded-HTTPS")
 {
   local $ENV{MOJO_REVERSE_PROXY} = 1;
-  $t->get_ok('/0', {'X-Forwarded-Host' => 'mojolicio.us:8080'})
-    ->status_is(200)->content_is("http://mojolicio.us:8080/0-$source-0");
-}
-
-# GET /0 ("X-Forwarded-HTTPS" and "X-Forwarded-Host")
-$t->get_ok('/0',
-  {'X-Forwarded-HTTPS' => 1, 'X-Forwarded-Host' => 'mojolicio.us'})
-  ->status_is(200)->content_like(qr#http\://localhost\:\d+/0\-$source\-0#);
-
-# GET /0 (reverse proxy with "X-Forwarded-HTTPS" and "X-Forwarded-Host")
-{
-  local $ENV{MOJO_REVERSE_PROXY} = 1;
-  $t->get_ok('/0',
-    {'X-Forwarded-HTTPS' => 1, 'X-Forwarded-Host' => 'mojolicio.us'})
-    ->status_is(200)->content_is("https://mojolicio.us/0-$source-0");
+  $t->get_ok('/0', {'X-Forwarded-HTTPS' => 1})->status_is(200)
+    ->content_like(qr#https\://localhost\:\d+/0\-$source\-0#);
 }
 
 # DELETE /inline/epl
@@ -971,6 +963,9 @@ $t->get_ok('/foo_relaxed/')->status_is(404);
 
 # GET /foo_wildcard/123
 $t->get_ok('/foo_wildcard/123')->status_is(200)->content_is('123');
+
+# GET /foo_wildcard/IQ==%0A
+$t->get_ok('/foo_wildcard/IQ==%0A')->status_is(200)->content_is("IQ==\x0a");
 
 # GET /foo_wildcard
 $t->get_ok('/foo_wildcard/')->status_is(404);
@@ -1041,30 +1036,6 @@ $t->post_ok('/template')->status_is(200)
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_is('Just works!');
 
-# GET /memorized
-$t->get_ok('/memorized')->status_is(200)
-  ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_like(qr/\d+a\d+b\d+c\d+\nd\d+\ne\d+/);
-my $memorized = $t->tx->res->body;
-
-# GET /memorized
-$t->get_ok('/memorized')->status_is(200)
-  ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_is($memorized);
-
-# GET /memorized
-$t->get_ok('/memorized')->status_is(200)
-  ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_is($memorized);
-
-# GET /memorized (expired)
-sleep 2;
-$t->get_ok('/memorized')->status_is(200)
-  ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_like(qr/\d+a\d+b\d+c\d+\nd\d+\ne\d+/)->content_isnt($memorized);
-
 # GET /something
 $t->get_ok('/something')->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
@@ -1125,14 +1096,14 @@ $t->get_ok('/layout')->status_is(200)
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_is("LayoutYea baby! with layout\n");
 
-# GET /firefox
-$t->get_ok('/firefox/bar', {'User-Agent' => 'Firefox'})->status_is(200)
+# PATCH /firefox
+$t->patch_ok('/firefox/bar', {'User-Agent' => 'Firefox'})->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_is('/firefox/foo');
 
-# GET /firefox
-$t->get_ok('/firefox/bar', {'User-Agent' => 'Explorer'})->status_is(404)
+# PATCH /firefox
+$t->patch_ok('/firefox/bar', {'User-Agent' => 'Explorer'})->status_is(404)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_like(qr/Oops!/);
@@ -1277,8 +1248,8 @@ $t->get_ok('/redirect_callback')->status_is(301)
 $t->get_ok('/static_render')->status_is(200)
   ->header_is(Server           => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By'   => 'Mojolicious (Perl)')
-  ->header_is('Content-Length' => 30)
-  ->content_is('Hello Mojo from a static file!');
+  ->header_is('Content-Length' => 31)
+  ->content_is("Hello Mojo from a static file!\n");
 
 # GET /redirect_named (with redirecting enabled in user agent)
 $t->ua->max_redirects(3);
@@ -1309,8 +1280,8 @@ $t->get_ok('/koi8-r')->status_is(200)
 $t->get_ok('/hello.txt')->status_is(200)
   ->header_is(Server          => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By'  => 'Mojolicious (Perl)')
-  ->header_is('Accept-Ranges' => 'bytes')->header_is('Content-Length' => 30)
-  ->content_is('Hello Mojo from a static file!');
+  ->header_is('Accept-Ranges' => 'bytes')->header_is('Content-Length' => 31)
+  ->content_is("Hello Mojo from a static file!\n");
 
 # GET /hello.txt (partial static file)
 $t->get_ok('/hello.txt', {'Range' => 'bytes=2-8'})->status_is(206)
@@ -1407,8 +1378,16 @@ EOF
 $t->get_ok('/url_with/foo?foo=bar')->status_is(200)
   ->content_like(qr|http\://localhost\:\d+/url_with/bar\?foo\=bar|);
 
+# GET /dynamic/inline
+$t->get_ok('/dynamic/inline')->status_is(200)
+  ->content_is("dynamic inline 1\n");
+
+# GET /dynamic/inline (again)
+$t->get_ok('/dynamic/inline')->status_is(200)
+  ->content_is("dynamic inline 2\n");
+
 # User agent timer
-$tua->ioloop->one_tick('0.1');
+$tua->ioloop->one_tick;
 is $timer,
   "/root.html\n/root.html\n/root.html\n/root.html\n/root.html\nworks!",
   'right content';
@@ -1437,25 +1416,6 @@ text!
 
 @@ template.txt.epl
 <div id="foo">Redirect works!</div>
-
-@@ memorized.html.ep
-<%= memorize begin =%>
-<%= time =%>
-<% end =%>
-<%= memorize begin =%>
-    <%= 'a' . time =%>
-<% end =%><%= memorize begin =%>
-<%= 'b' . time =%>
-<% end =%>
-<%= memorize test => begin =%>
-<%= 'c' . time =%>
-<% end =%>
-<%= memorize expiry => {expires => time + 1} => begin %>
-<%= 'd' . time =%>
-<% end =%>
-<%= memorize {expires => time + 1} => begin %>
-<%= 'e' . time =%>
-<% end =%>
 
 @@ test(test)(\Qtest\E)(.html.ep
 <%= $self->match->endpoint->name %>

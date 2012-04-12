@@ -1,0 +1,14 @@
+Changes
+lib/Mojolicious/Plugin/PlackMiddleware.pm
+Makefile.PL
+MANIFEST
+README.pod
+t/00_load.t
+t/01_basic.t
+t/public/css.css
+xt/memory_leak.t
+xt/perlcritic.t
+xt/perlcriticrc
+xt/pod.t
+xt/podcoverage.t
+xt/podspell.t
