@@ -69,7 +69,7 @@ get '/' => 'root';
 
 # GET /alternatives/☃
 # GET /alternatives/♥
-get '/alternatives/:char' => [char => [qw/☃ ♥/]] => sub {
+get '/alternatives/:char' => [char => [qw(☃ ♥)]] => sub {
   my $self = shift;
   $self->render_text($self->url_for);
 };
@@ -175,8 +175,8 @@ get '/maybe/ajax' => sub {
 # GET /stream
 get '/stream' => sub {
   my $self = shift;
-  my $chunks =
-    [qw/foo bar/, $self->req->url->to_abs->userinfo, $self->url_for->to_abs];
+  my $chunks
+    = [qw(foo bar), $self->req->url->to_abs->userinfo, $self->url_for->to_abs];
   $self->res->code(200);
   $self->res->headers->content_type('text/plain');
   my $cb;
@@ -341,7 +341,7 @@ any '/something' => sub {
 };
 
 # GET|POST /something/else
-any [qw/get post/] => '/something/else' => sub {
+any [qw(get post)] => '/something/else' => sub {
   my $self = shift;
   $self->render_text('Yay!');
 };
@@ -593,8 +593,7 @@ $t->get_ok('/unicode/a\\b')->status_is(200)->content_is('a\\b/unicode/a%5Cb');
 # GET /
 $t->get_ok('/')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_is(
-  "/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
+  ->content_is("/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
 
 # HEAD /
 $t->head_ok('/')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
@@ -603,8 +602,7 @@ $t->head_ok('/')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
 
 # GET / (with body)
 $t->get_ok('/', '1234' x 1024)->status_is(200)
-  ->content_is(
-  "/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
+  ->content_is("/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
 
 # DELETE /
 $t->delete_ok('/')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
@@ -704,15 +702,15 @@ $t->get_ok('/inline/exception')->status_is(500)
 $t->get_ok('/data/exception')->status_is(500)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_is(qq/Died at template from DATA section "dies.html.ep" line 2/
-    . qq/, near "123".\n\n/);
+  ->content_is(qq{Died at template "dies.html.ep" from DATA section line 2}
+    . qq{, near "123".\n\n});
 
 # GET /template/exception
 $t->get_ok('/template/exception')->status_is(500)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_is(
-  qq/Died at template "dies_too.html.ep" line 2, near "321".\n\n/);
+  qq{Died at template "dies_too.html.ep" line 2, near "321".\n\n});
 
 # GET /with-format
 $t->get_ok('/with-format')->content_is("/without-format\n");
@@ -777,8 +775,7 @@ $t->get_ok('/static2.txt', {'Range' => 'bytes=2-5'})->status_is(206)
 # GET /template.txt.epl (protected DATA template)
 $t->get_ok('/template.txt.epl')->status_is(404)
   ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_like(qr/Oops!/);
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_like(qr/Oops!/);
 
 # GET /null/0
 $t->get_ok('/null/0')->status_is(200)
@@ -826,7 +823,7 @@ $t->get_ok(
   $t->ua->app_url->userinfo('sri:foo')->path('/stream')->query(foo => 'bar'))
   ->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_like(qr#^foobarsri\:foohttp://localhost\:\d+/stream$#);
+  ->content_like(qr!^foobarsri\:foohttp://localhost\:\d+/stream$!);
 
 # GET /maybe/ajax (not ajax)
 $t->get_ok('/maybe/ajax')->status_is(200)
@@ -867,34 +864,32 @@ $t->get_ok('/root.txt')->status_is(200)
   ->content_is('root fallback!');
 
 # GET /.html
-$t->get_ok('/.html')->status_is(200)
-  ->header_is(Server         => 'Mojolicious (Perl)')
+$t->get_ok('/.html')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_is(
-  "/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
+  ->content_is("/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
 
 # GET /0 ("X-Forwarded-For")
 my $source = $t->tx->local_address;
 $t->get_ok('/0', {'X-Forwarded-For' => '192.168.2.2, 192.168.2.1'})
-  ->status_is(200)->content_like(qr#http\://localhost\:\d+/0\-$source\-0#);
+  ->status_is(200)->content_like(qr!http\://localhost\:\d+/0-$source-0!);
 
 # GET /0 ("X-Forwarded-HTTPS")
 $t->get_ok('/0', {'X-Forwarded-HTTPS' => 1})->status_is(200)
-  ->content_like(qr#http\://localhost\:\d+/0\-$source\-0#);
+  ->content_like(qr!http\://localhost\:\d+/0-$source-0!);
 
 # GET /0 (reverse proxy with "X-Forwarded-For")
 {
   local $ENV{MOJO_REVERSE_PROXY} = 1;
   $t->get_ok('/0', {'X-Forwarded-For' => '192.168.2.2, 192.168.2.1'})
     ->status_is(200)
-    ->content_like(qr#http\://localhost\:\d+/0\-192\.168\.2\.1\-0#);
+    ->content_like(qr!http\://localhost\:\d+/0-192\.168\.2\.1-0!);
 }
 
 # GET /0 (reverse proxy with "X-Forwarded-HTTPS")
 {
   local $ENV{MOJO_REVERSE_PROXY} = 1;
   $t->get_ok('/0', {'X-Forwarded-HTTPS' => 1})->status_is(200)
-    ->content_like(qr#https\://localhost\:\d+/0\-$source\-0#);
+    ->content_like(qr!https\://localhost\:\d+/0-$source-0!);
 }
 
 # DELETE /inline/epl
@@ -911,7 +906,7 @@ $t->get_ok('/inline/ep/partial')->status_is(200)
   ->content_is("♥just ♥\nworks!\n");
 
 # GET /source
-$t->get_ok('/source')->status_is(200)->content_like(qr#get_ok\('/source#);
+$t->get_ok('/source')->status_is(200)->content_like(qr!get_ok\('/source!);
 
 # GET /source (file does not exist)
 $t->get_ok('/source?fail=1')->status_is(404)->content_is('does not exist!');
@@ -928,8 +923,7 @@ $t->get_ok('/source?fail=1')->status_is(404)->content_is('does not exist!');
 $t->get_ok('/foo_relaxed/123')->status_is(200)->content_is('1230');
 
 # GET /foo_relaxed/123 (Do Not Track)
-$t->get_ok('/foo_relaxed/123', {DNT => 1})->status_is(200)
-  ->content_is('1231');
+$t->get_ok('/foo_relaxed/123', {DNT => 1})->status_is(200)->content_is('1231');
 
 # GET /foo_relaxed
 $t->get_ok('/foo_relaxed/')->status_is(404);
@@ -951,7 +945,7 @@ $t->get_ok('/foo_wildcard_too/')->status_is(404);
 
 # GET /with/header/condition
 $t->get_ok('/with/header/condition', {'X-Secret-Header' => 'bar'})
-  ->status_is(200)->content_like(qr#^Test ok<base href="http://localhost#);
+  ->status_is(200)->content_like(qr!^Test ok<base href="http://localhost!);
 
 # GET /with/header/condition (not found)
 $t->get_ok('/with/header/condition')->status_is(404)->content_like(qr/Oops!/);
@@ -1000,8 +994,7 @@ $t->get_ok('/session_cookie/2')->status_is(200)
 
 # GET /foo
 $t->get_ok('/foo')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_is('Yea baby!');
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_is('Yea baby!');
 
 # POST /template
 $t->post_ok('/template')->status_is(200)
@@ -1040,8 +1033,7 @@ $t->post_ok('/something/else')->status_is(200)
 # DELETE /something/else
 $t->delete_ok('/something/else')->status_is(404)
   ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_like(qr/Oops!/);
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_like(qr/Oops!/);
 
 # GET /regex/23
 $t->get_ok('/regex/23')->status_is(200)
@@ -1051,8 +1043,7 @@ $t->get_ok('/regex/23')->status_is(200)
 # GET /regex/foo
 $t->get_ok('/regex/foo')->status_is(404)
   ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_like(qr/Oops!/);
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_like(qr/Oops!/);
 
 # POST /bar
 $t->post_ok('/bar')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
@@ -1078,8 +1069,7 @@ $t->patch_ok('/firefox/bar', {'User-Agent' => 'Firefox'})->status_is(200)
 # PATCH /firefox
 $t->patch_ok('/firefox/bar', {'User-Agent' => 'Explorer'})->status_is(404)
   ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_like(qr/Oops!/);
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_like(qr/Oops!/);
 
 # GET /url_for_foxy
 $t->get_ok('/url_for_foxy')->status_is(200)
@@ -1193,7 +1183,7 @@ $t->get_ok('/redirect_path')->status_is(302)
   ->header_is(Server           => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By'   => 'Mojolicious (Perl)')
   ->header_is('Content-Length' => 12)
-  ->header_like(Location => qr#/foo/bar\?foo=bar$#)
+  ->header_like(Location => qr!/foo/bar\?foo=bar$!)
   ->content_is('Redirecting!');
 
 # GET /redirect_named
@@ -1201,14 +1191,14 @@ $t->get_ok('/redirect_named')->status_is(302)
   ->header_is(Server           => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By'   => 'Mojolicious (Perl)')
   ->header_is('Content-Length' => 12)
-  ->header_like(Location => qr#/template.txt$#)->content_is('Redirecting!');
+  ->header_like(Location => qr!/template.txt$!)->content_is('Redirecting!');
 
 # GET /redirect_no_render
 $t->get_ok('/redirect_no_render')->status_is(302)
   ->header_is(Server           => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By'   => 'Mojolicious (Perl)')
   ->header_is('Content-Length' => 0)
-  ->header_like(Location => qr#/template.txt$#)->content_is('');
+  ->header_like(Location => qr!/template.txt$!)->content_is('');
 
 # GET /redirect_callback
 $t->get_ok('/redirect_callback')->status_is(301)
@@ -1237,11 +1227,11 @@ $t->ua->max_redirects(0);
 Test::Mojo->new->tx($t->tx->previous)->status_is(302)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->header_like(Location => qr#/template.txt$#)->content_is('Redirecting!');
+  ->header_like(Location => qr!/template.txt$!)->content_is('Redirecting!');
 
 # GET /koi8-r
-my $koi8 =
-    'Этот человек наполняет меня надеждой.'
+my $koi8
+  = 'Этот человек наполняет меня надеждой.'
   . ' Ну, и некоторыми другими глубокими и приводящими в'
   . ' замешательство эмоциями.';
 $t->get_ok('/koi8-r')->status_is(200)
@@ -1307,7 +1297,7 @@ $t->get_ok('/redirect/condition/0')->status_is(200)
 $t->get_ok('/redirect/condition/1')->status_is(302)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->header_like('Location' => qr#/template$#)->content_is('');
+  ->header_like('Location' => qr!/template$!)->content_is('');
 
 # GET /redirect/condition/1 (with condition header)
 $t->get_ok('/redirect/condition/1' => {'X-Condition-Test' => 1})
@@ -1332,8 +1322,8 @@ $t->get_ok('/captures/♥/☃')->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_is('/captures/%E2%99%A5/%E2%98%83');
-is b($t->tx->res->body)->url_unescape->decode('UTF-8'),
-  '/captures/♥/☃', 'right result';
+is b($t->tx->res->body)->url_unescape->decode('UTF-8'), '/captures/♥/☃',
+  'right result';
 
 # GET /favicon.ico (bundled file in DATA section)
 $t->get_ok('/favicon.ico')->status_is(200)->content_is("Not a favicon!\n\n");
@@ -1349,7 +1339,7 @@ EOF
 
 # GET /url_with/foo
 $t->get_ok('/url_with/foo?foo=bar')->status_is(200)
-  ->content_like(qr|http\://localhost\:\d+/url_with/bar\?foo\=bar|);
+  ->content_like(qr!http\://localhost\:\d+/url_with/bar\?foo\=bar!);
 
 # GET /dynamic/inline
 $t->get_ok('/dynamic/inline')->status_is(200)

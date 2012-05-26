@@ -8,10 +8,11 @@ BEGIN {
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
-use Test::More tests => 195;
+use Test::More tests => 201;
 
 # "Let's see how crazy I am now, Nixon. The correct answer is very."
 use Mojo::ByteStream 'b';
+use Mojo::CookieJar;
 use Mojolicious::Lite;
 use Test::Mojo;
 
@@ -187,7 +188,7 @@ get '/no_format' => {text => 'No format detection.'};
 
 # GET /some_formats.txt
 # GET /some_formats.html
-get '/some_formats' => [format => [qw/txt json/]] =>
+get '/some_formats' => [format => [qw(txt json)]] =>
   {text => 'Some format detection.'};
 
 # GET /no_real_format.xml
@@ -202,21 +203,20 @@ my $t = Test::Mojo->new;
 $t->get_ok('/with_under', {'X-Bender' => 'Rodriguez'})->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->header_is('X-Under' => '23, 24')->header_like('X-Under' => qr/23, 24/)
+  ->header_is('X-Under'      => '23, 24')->header_like('X-Under' => qr/23, 24/)
   ->content_is('Unders are cool!');
 
 # GET /with_under_too
 $t->get_ok('/with_under_too', {'X-Bender' => 'Rodriguez'})->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->header_is('X-Under' => '23, 24')->header_like('X-Under' => qr/23, 24/)
+  ->header_is('X-Under'      => '23, 24')->header_like('X-Under' => qr/23, 24/)
   ->content_is('Unders are cool too!');
 
 # GET /with_under_too
 $t->get_ok('/with_under_too')->status_is(404)
   ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_like(qr/Oops!/);
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_like(qr/Oops!/);
 
 # GET /param_auth
 $t->get_ok('/param_auth')->status_is(200)
@@ -227,8 +227,7 @@ $t->get_ok('/param_auth')->status_is(200)
 # GET /param_auth?name=Bender
 $t->get_ok('/param_auth?name=Bender')->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
-  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->content_is("Bender!\n");
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_is("Bender!\n");
 
 # GET /param_auth/too
 $t->get_ok('/param_auth/too')->status_is(200)
@@ -257,9 +256,18 @@ ok $t->tx->res->cookie('mojolicious')->httponly,
 $t->reset_session;
 my $session = b("☃☃☃☃☃")->encode->b64_encode('');
 my $hmac    = $session->clone->hmac_md5_sum($t->app->secret);
-my $broken  = "\$Version=1; mojolicious=$session--$hmac; \$Path=/";
-$t->get_ok('/bridge2stash' => {Cookie => $broken})->status_is(200)
+$t->get_ok('/bridge2stash' => {Cookie => "mojolicious=$session--$hmac"})
+  ->status_is(200)->content_is("stash too!!!!!!!\n");
+
+# GET /bridge2stash (without cookie jar)
+$t->ua->cookie_jar(0);
+$t->get_ok('/bridge2stash' => {'X-Flash' => 1})->status_is(200)
   ->content_is("stash too!!!!!!!\n");
+
+# GET /bridge2stash (again without cookie jar)
+$t->get_ok('/bridge2stash' => {'X-Flash' => 1})->status_is(200)
+  ->content_is("stash too!!!!!!!\n");
+$t->ua->cookie_jar(Mojo::CookieJar->new);
 
 # GET /bridge2stash (fresh start)
 $t->reset_session;
