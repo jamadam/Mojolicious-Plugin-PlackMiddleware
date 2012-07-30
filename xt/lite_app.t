@@ -2,14 +2,14 @@ use Mojo::Base -strict;
 
 use utf8;
 
-# Disable Bonjour, IPv6 and libev
+# Disable IPv6 and libev
 BEGIN {
-  $ENV{MOJO_MODE}       = 'development';
-  $ENV{MOJO_NO_BONJOUR} = $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_REACTOR}    = 'Mojo::Reactor::Poll';
+  $ENV{MOJO_MODE}    = 'development';
+  $ENV{MOJO_NO_IPV6} = 1;
+  $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
-use Test::More tests => 685;
+use Test::More tests => 713;
 
 # "Wait you're the only friend I have...
 #  You really want a robot for a friend?
@@ -45,6 +45,9 @@ is app->test_helper2, 'Mojolicious::Controller', 'right value';
 app->renderer->add_handler(dead => sub { die 'renderer works!' });
 
 plugin plack_middleware => [];
+
+# UTF-8 text
+app->types->type(txt => 'text/plain;charset=UTF-8');
 
 # GET /☃
 get '/☃' => sub {
@@ -104,6 +107,22 @@ post '/multipart/form' => sub {
 get '/auto_name' => sub {
   my $self = shift;
   $self->render(text => $self->url_for('auto_name'));
+};
+
+# GET /query_string
+get '/query_string' => sub {
+  my $self = shift;
+  $self->render_text(b($self->req->url->query)->url_unescape);
+};
+
+# GET /multi/*
+get '/multi/:bar' => sub {
+  my $self = shift;
+  my ($foo, $bar, $baz) = $self->param([qw(foo bar baz)]);
+  $self->render(
+    data => join('', map { $_ // '' } $foo, $bar, $baz),
+    test => $self->param(['yada'])
+  );
 };
 
 # GET /reserved
@@ -290,7 +309,7 @@ post '/with/body/and/headers/desc' => sub {
   my $self = shift;
   return
     if $self->req->headers->header('with') ne 'header'
-      || $self->req->body ne 'body';
+    || $self->req->body ne 'body';
   $self->render_text('bar');
 };
 
@@ -547,6 +566,7 @@ my $t = Test::Mojo->new;
 
 # Application is already available
 is $t->app->test_helper2, 'Mojolicious::Controller', 'right class';
+is $t->app, app->commands->app, 'applications are equal';
 
 # User agent timer
 my $ua  = Mojo::UserAgent->new(ioloop => Mojo::IOLoop->singleton)->app(app);
@@ -679,6 +699,27 @@ $t->get_ok('/auto_name')->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_is('/custom_name');
+
+# GET /query_string (query string roundtrip)
+$t->get_ok('/query_string?http://mojolicio.us/perldoc?foo=bar')
+  ->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
+  ->content_is('http://mojolicio.us/perldoc?foo=bar');
+
+# GET /multi/B
+$t->get_ok('/multi/B?foo=A&baz=C')->status_is(200)
+  ->header_is(Server         => 'Mojolicious (Perl)')
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_is('ABC');
+
+# GET /multi/B (injection attack)
+$t->get_ok('/multi/B?foo=A&foo=E&baz=C&yada=D&yada=text&yada=fail')
+  ->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_is('ABC');
+
+# GET /multi/B (missing parameter)
+$t->get_ok('/multi/B?baz=C')->status_is(200)
+  ->header_is(Server         => 'Mojolicious (Perl)')
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_is('BC');
 
 # GET /reserved
 $t->get_ok('/reserved?data=just-works')->status_is(200)
@@ -864,32 +905,35 @@ $t->get_ok('/root.txt')->status_is(200)
   ->content_is('root fallback!');
 
 # GET /.html
-$t->get_ok('/.html')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
+$t->get_ok('/.html')->status_is(200)
+  ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->content_is("/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
 
 # GET /0 ("X-Forwarded-For")
-my $source = $t->tx->local_address;
-$t->get_ok('/0', {'X-Forwarded-For' => '192.168.2.2, 192.168.2.1'})
-  ->status_is(200)->content_like(qr!http\://localhost\:\d+/0-$source-0!);
+$t->get_ok('/0', {'X-Forwarded-For' => '192.0.2.2, 192.0.2.1'})
+  ->status_is(200)->content_like(qr!^http\://localhost\:\d+/0-!)
+  ->content_like(qr/-0$/)->content_unlike(qr!-192\.0\.2\.1-0$!);
 
 # GET /0 ("X-Forwarded-HTTPS")
 $t->get_ok('/0', {'X-Forwarded-HTTPS' => 1})->status_is(200)
-  ->content_like(qr!http\://localhost\:\d+/0-$source-0!);
+  ->content_like(qr!^http\://localhost\:\d+/0-!)->content_like(qr/-0$/)
+  ->content_unlike(qr!-192\.0\.2\.1-0$!);
 
 # GET /0 (reverse proxy with "X-Forwarded-For")
 {
   local $ENV{MOJO_REVERSE_PROXY} = 1;
-  $t->get_ok('/0', {'X-Forwarded-For' => '192.168.2.2, 192.168.2.1'})
+  $t->get_ok('/0', {'X-Forwarded-For' => '192.0.2.2, 192.0.2.1'})
     ->status_is(200)
-    ->content_like(qr!http\://localhost\:\d+/0-192\.168\.2\.1-0!);
+    ->content_like(qr!http\://localhost\:\d+/0-192\.0\.2\.1-0$!);
 }
 
 # GET /0 (reverse proxy with "X-Forwarded-HTTPS")
 {
   local $ENV{MOJO_REVERSE_PROXY} = 1;
   $t->get_ok('/0', {'X-Forwarded-HTTPS' => 1})->status_is(200)
-    ->content_like(qr!https\://localhost\:\d+/0-$source-0!);
+    ->content_like(qr!^https\://localhost\:\d+/0-!)->content_like(qr/-0$/)
+    ->content_unlike(qr!-192\.0\.2\.1-0$!);
 }
 
 # DELETE /inline/epl
@@ -1219,10 +1263,11 @@ $t->ua->max_redirects(3);
 $t->get_ok('/redirect_named')->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
-  ->header_is(Location       => undef)->element_exists('#foo')
-  ->element_exists_not('#bar')->text_isnt('div' => 'Redirect')
-  ->text_is('div' => 'Redirect works!')->text_unlike('[id="foo"]' => qr/Foo/)
-  ->text_like('[id="foo"]' => qr/^Redirect/);
+  ->header_is(Location       => undef)->element_exists('#☃')
+  ->element_exists_not('#foo')->text_isnt('#foo' => 'whatever')
+  ->text_isnt('div#☃' => 'Redirect')
+  ->text_is('div#☃' => 'Redirect works!')->text_unlike('div#☃' => qr/Foo/)
+  ->text_like('div#☃' => qr/^Redirect/);
 $t->ua->max_redirects(0);
 Test::Mojo->new->tx($t->tx->previous)->status_is(302)
   ->header_is(Server         => 'Mojolicious (Perl)')
@@ -1378,7 +1423,7 @@ Just some
 text!
 
 @@ template.txt.epl
-<div id="foo">Redirect works!</div>
+<div id="☃">Redirect works!</div>
 
 @@ test(test)(\Qtest\E)(.html.ep
 <%= $self->match->endpoint->name %>
