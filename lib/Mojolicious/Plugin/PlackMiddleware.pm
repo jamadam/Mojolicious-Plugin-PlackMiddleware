@@ -62,9 +62,9 @@ our $VERSION = '0.25';
             
             my $plack_env = mojo_req_to_psgi_env($c->req);
             
-            $plack_env->{'mojo.c'} = $c;
+            local $plack_env->{'mojo.c'} = $c;
             
-            $plack_env->{'psgi.errors'} =
+            local $plack_env->{'psgi.errors'} =
                 Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
                     $c->app->log->debug(shift);
                 });
