@@ -1,5 +1,7 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
+0.26 2012/10/30
+
 0.25 2012/10/30
   - Fixed a bug on false valued body.
 
