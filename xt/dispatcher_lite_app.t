@@ -6,10 +6,8 @@ BEGIN {
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
-use Test::More tests => 24;
+use Test::More tests => 33;
 
-# "Just once I'd like to eat dinner with a celebrity who isn't bound and
-#  gagged."
 use Mojo::Message::Response;
 use Mojolicious::Lite;
 use Test::Mojo;
@@ -65,11 +63,41 @@ hook after_static_dispatch => sub {
     if $self->req->url->path->contains('/custom_too');
 };
 
+# Cleared response for /res.txt
+hook after_static_dispatch => sub {
+  my $self = shift;
+  return
+    unless $self->req->url->path->contains('/res.txt')
+    && $self->param('route');
+  $self->tx->res(Mojo::Message::Response->new);
+};
+
+# Response generating condition "res" for /res.txt
+app->routes->add_condition(
+  res => sub {
+    my ($route, $c) = @_;
+    return 1 unless $c->param('res');
+    $c->tx->res(
+      Mojo::Message::Response->new(code => 201)->body('Conditional response!')
+    );
+    $c->rendered and return undef;
+  }
+);
+
 # GET /
 get '/' => sub { shift->render_text('works') };
 
 # GET /custom (never called if custom dispatchers work)
 get '/custom' => sub { shift->render_text('does not work') };
+
+# GET /res.txt (custom response)
+get '/res.txt' => (res => 1) => sub {
+  my $self = shift;
+  my $res
+    = Mojo::Message::Response->new(code => 202)->body('Custom response!');
+  $self->tx->res($res);
+  $self->rendered;
+};
 
 my $t = Test::Mojo->new;
 
@@ -82,6 +110,16 @@ $t->get_ok('/hello.txt')->status_is(200)
 
 # GET /custom
 $t->get_ok('/custom?a=works+too')->status_is(205)->content_is('works too');
+
+# GET /res.txt (static file)
+$t->get_ok('/res.txt')->status_is(200)->content_is("Static response!\n");
+
+# GET /res.txt?route=1 (custom response)
+$t->get_ok('/res.txt?route=1')->status_is(202)->content_is('Custom response!');
+
+# GET /res.txt?route=1&res=1 (conditional response)
+$t->get_ok('/res.txt?route=1&res=1')->status_is(201)
+  ->content_is('Conditional response!');
 
 # GET /custom_too
 $t->get_ok('/custom_too')->status_is(200)->content_is('this works too');
@@ -97,3 +135,7 @@ $t->get_ok('/not_found')->status_is(200)->content_is('works');
 
 # GET /not_found (internal redirect to second wrapper)
 $t->get_ok('/not_found?wrap=1')->status_is(200)->content_is('Wrapped again!');
+
+__DATA__
+@@ res.txt
+Static response!
