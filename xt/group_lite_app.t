@@ -8,9 +8,8 @@ BEGIN {
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
-use Test::More tests => 201;
+use Test::More tests => 208;
 
-# "Let's see how crazy I am now, Nixon. The correct answer is very."
 use Mojo::ByteStream 'b';
 use Mojo::UserAgent::CookieJar;
 use Mojolicious::Lite;
@@ -18,9 +17,19 @@ use Test::Mojo;
 
 plugin plack_middleware => [];
 
+# GET /expiration
+get '/expiration' => sub {
+  my $self = shift;
+  if ($self->param('redirect')) {
+    $self->session(expiration => 0);
+    return $self->redirect_to('expiration');
+  }
+  $self->render(text => $self->session('expiration'));
+};
+
 under sub {
   my $self = shift;
-  return unless $self->req->headers->header('X-Bender');
+  return undef unless $self->req->headers->header('X-Bender');
   $self->res->headers->add('X-Under' => 23);
   $self->res->headers->add('X-Under' => 24);
   1;
@@ -47,7 +56,7 @@ under sub {
 
   # Not authenticated
   $self->render('param_auth_denied');
-  return;
+  return undef;
 };
 
 # GET /param_auth
@@ -85,7 +94,7 @@ get '/late/session' => sub {
 };
 
 # Counter
-my $under = 0;
+my $under;
 under sub {
   shift->res->headers->header('X-Under' => ++$under);
   1;
@@ -170,7 +179,7 @@ group {
     my $self = shift;
     return 1 if $self->req->param('ok');
     $self->render(text => "You're not ok.");
-    return;
+    return undef;
   };
 
   # GET /authgroup
@@ -199,15 +208,23 @@ get '/one_format' => [format => 'xml'] => {text => 'One format.'};
 
 my $t = Test::Mojo->new;
 
+# GET /expiration (zero expiration persists)
+$t->ua->max_redirects(1);
+$t->get_ok('/expiration?redirect=1')->status_is(200)
+  ->header_is(Server         => 'Mojolicious (Perl)')
+  ->header_is('X-Powered-By' => 'Mojolicious (Perl)')->content_is('0');
+ok !$t->tx->res->cookie('mojolicious')->expires, 'no expiration';
+$t->reset_session;
+
 # GET /with_under
-$t->get_ok('/with_under', {'X-Bender' => 'Rodriguez'})->status_is(200)
+$t->get_ok('/with_under' => {'X-Bender' => 'Rodriguez'})->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->header_is('X-Under'      => '23, 24')->header_like('X-Under' => qr/23, 24/)
   ->content_is('Unders are cool!');
 
 # GET /with_under_too
-$t->get_ok('/with_under_too', {'X-Bender' => 'Rodriguez'})->status_is(200)
+$t->get_ok('/with_under_too' => {'X-Bender' => 'Rodriguez'})->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->header_is('X-Under'      => '23, 24')->header_like('X-Under' => qr/23, 24/)
@@ -244,6 +261,7 @@ $t->get_ok('/param_auth/too?name=Bender')->status_is(200)
 # GET /bridge2stash
 $t->get_ok('/bridge2stash' => {'X-Flash' => 1})->status_is(200)
   ->content_is("stash too!!!!!!!\n");
+ok $t->tx->res->cookie('mojolicious')->expires, 'has expiration';
 
 # GET /bridge2stash (with cookies, session and flash)
 $t->get_ok('/bridge2stash')->status_is(200)
@@ -307,13 +325,13 @@ $t->get_ok('/late/session')->status_is(200)->content_is('works!');
 $t->get_ok('/late/session')->status_is(200)->content_is('works!');
 
 # GET /with/under/count
-$t->get_ok('/with/under/count', {'X-Bender' => 'Rodriguez'})->status_is(200)
+$t->get_ok('/with/under/count' => {'X-Bender' => 'Rodriguez'})->status_is(200)
   ->header_is(Server         => 'Mojolicious (Perl)')
   ->header_is('X-Powered-By' => 'Mojolicious (Perl)')
   ->header_is('X-Under'      => 1)->content_is("counter\n");
 
 # GET /bridge2stash (again)
-$t->get_ok('/bridge2stash', {'X-Flash' => 1})->status_is(200)
+$t->get_ok('/bridge2stash' => {'X-Flash' => 1})->status_is(200)
   ->content_is(
   "stash too!cookie!signed_cookie!!bad_cookie--12345678!session!!\n");
 
@@ -435,8 +453,8 @@ $t->get_ok('/one_format')->status_is(404)
   ->content_type_is('text/html;charset=UTF-8');
 
 # GET /one_format.xml
-$t->get_ok('/one_format.xml')->status_is(200)->content_type_is('text/xml')
-  ->content_is('One format.');
+$t->get_ok('/one_format.xml')->status_is(200)
+  ->content_type_is('application/xml')->content_is('One format.');
 
 # GET /one_format.txt
 $t->get_ok('/one_format.txt')->status_is(404)

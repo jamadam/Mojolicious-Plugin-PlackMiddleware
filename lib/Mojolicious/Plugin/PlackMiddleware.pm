@@ -178,7 +178,7 @@ our $VERSION = '0.25';
         }
         my @body;
         my $offset = 0;
-        while (my $chunk = $mojo_res->get_body_chunk($offset)) {
+        while (length(my $chunk = $mojo_res->get_body_chunk($offset))) {
             push(@body, $chunk);
             $offset += length $chunk;
         }
