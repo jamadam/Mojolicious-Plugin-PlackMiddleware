@@ -12,7 +12,6 @@ use Test::More;
         use strict;
         use warnings;
         use base 'Mojolicious';
-        use MojoX::Tusu;
         
         sub startup {
             my $self = shift;
