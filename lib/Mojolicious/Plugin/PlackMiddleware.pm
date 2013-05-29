@@ -59,7 +59,7 @@ our $VERSION = '0.26';
                 $inside_app->();
                 return;
             }
-            
+            #use Data::Dumper; print Dumper($c->req);
             my $plack_env = mojo_req_to_psgi_env($c->req);
             
             local $plack_env->{'mojo.c'} = $c;
