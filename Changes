@@ -1,6 +1,8 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
-0.26 2012/11/26
+0.26 2013/05/30
+  - Tested for Mojolicious v4.07
+  - Supported SSL
   - Updated comatibility tests.
 
 0.25 2012/10/30
