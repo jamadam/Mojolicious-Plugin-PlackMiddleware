@@ -1,7 +1,5 @@
 use Mojo::Base -strict;
 
-use utf8;
-
 # Disable IPv6 and libev
 BEGIN {
   $ENV{MOJO_NO_IPV6} = 1;
@@ -10,36 +8,47 @@ BEGIN {
 
 use Test::More;
 use Mojo::ByteStream 'b';
+use Mojo::JSON 'j';
 use Mojolicious::Lite;
 use Test::Mojo;
 
 plugin plack_middleware => [];
 
-# WebSocket /echo
 websocket '/echo' => sub {
   my $self = shift;
+  $self->tx->max_websocket_size(262145);
+  $self->on(binary => sub { shift->send({binary => shift}) });
   $self->on(
-    message => sub {
-      my ($self, $msg) = @_;
-      $self->send("echo: $msg");
+    text => sub {
+      my ($self, $bytes) = @_;
+      $self->send("echo: $bytes");
     }
   );
 };
 
-# GET /echo
 get '/echo' => {text => 'plain echo!'};
 
-# GET /plain
+websocket '/json' => sub {
+  my $self = shift;
+  $self->on(binary => sub { shift->send({binary => j([@{j(shift)}, 4])}) });
+  $self->on(
+    text => sub {
+      my ($self, $json) = @_;
+      my $hash = j($json);
+      $hash->{test} += 1;
+      $self->send({text => j($hash)});
+    }
+  );
+};
+
 get '/plain' => {text => 'Nothing to see here!'};
 
-# WebSocket /push
 websocket '/push' => sub {
   my $self = shift;
   my $id = Mojo::IOLoop->recurring(0.1 => sub { $self->send('push') });
   $self->on(finish => sub { Mojo::IOLoop->remove($id) });
 };
 
-# WebSocket /unicode
 websocket '/unicode' => sub {
   my $self = shift;
   $self->on(
@@ -50,19 +59,16 @@ websocket '/unicode' => sub {
   );
 };
 
-# WebSocket /bytes
 websocket '/bytes' => sub {
   my $self = shift;
-  $self->tx->on(
+  $self->on(
     frame => sub {
       my ($ws, $frame) = @_;
       $ws->send({$frame->[4] == 2 ? 'binary' : 'text', $frame->[5]});
     }
   );
-  $self->rendered(101);
 };
 
-# WebSocket /once
 websocket '/once' => sub {
   my $self = shift;
   $self->on(
@@ -79,84 +85,115 @@ websocket '/once' => sub {
   );
 };
 
-# /nested
 under '/nested';
 
-# WebSocket /nested
 websocket sub {
   my $self = shift;
+  my $echo = $self->cookie('echo') // '';
+  $self->cookie(echo => 'again');
   $self->on(
     message => sub {
       my ($self, $msg) = @_;
-      $self->send("nested echo: $msg");
+      $self->send("nested echo: $msg$echo")->finish(1000);
     }
   );
 };
 
-# GET /nested
 get {text => 'plain nested!'};
 
-# POST /nested
 post {data => 'plain nested too!'};
 
 my $t = Test::Mojo->new;
 
-# WebSocket /echo (default protocol)
+# Default protocol
 $t->websocket_ok('/echo')->header_is('Sec-WebSocket-Protocol' => 'mojo')
-  ->send_ok('hello')->message_is('echo: hello')->finish_ok;
+  ->send_ok('hello')->message_ok('got a message')->message_is('echo: hello')
+  ->finish_ok;
 
-# WebSocket /echo (multiple times)
+# Multiple roundtrips
 $t->websocket_ok('/echo')->send_ok('hello again')
-  ->message_is('echo: hello again')->send_ok('and one more time')
-  ->message_is('echo: and one more time')->finish_ok;
+  ->message_ok->message_is('echo: hello again')->send_ok('and one more time')
+  ->message_ok->message_is('echo: and one more time')->finish_ok;
 
-# WebSocket /echo (with custom protocol)
+# Custom protocol
 $t->websocket_ok('/echo', {'Sec-WebSocket-Protocol' => 'foo, bar, baz'})
   ->header_is('Sec-WebSocket-Protocol' => 'foo')->send_ok('hello')
-  ->message_is('echo: hello')->finish_ok;
+  ->message_ok->message_is('echo: hello')->finish_ok;
 
-# WebSocket /echo (zero)
-$t->websocket_ok('/echo')->send_ok(0)->message_is('echo: 0')->finish_ok;
+# Bytes
+$t->websocket_ok('/echo')->send_ok({binary => 'bytes!'})
+  ->message_ok->message_is({binary => 'bytes!'})
+  ->send_ok({binary => 'bytes!'})
+  ->message_ok->message_isnt({text => 'bytes!'})->finish_ok;
 
-# GET /echo (plain alternative)
+# Zero
+$t->websocket_ok('/echo')->send_ok(0)->message_ok->message_is('echo: 0')
+  ->send_ok(0)->message_ok->message_like({text => qr/0/})->finish_ok(1000)
+  ->finished_ok(1000);
+
+# 64bit binary message (extended limit)
+$t->websocket_ok('/echo');
+is $t->tx->max_websocket_size, 262144, 'right size';
+$t->tx->max_websocket_size(262145);
+$t->send_ok({binary => 'a' x 262145})
+  ->message_ok->message_is({binary => 'a' x 262145})
+  ->finish_ok->finished_ok(1005);
+
+# 64bit binary message (too large)
+$t->websocket_ok('/echo')->send_ok({binary => 'b' x 262145})
+  ->finished_ok(1009);
+
+# Binary message in two 64bit frames without FIN bit (too large)
+$t->websocket_ok('/echo')->send_ok([0, 0, 0, 0, 2, 'c' x 100000])
+  ->send_ok([0, 0, 0, 0, 0, 'c' x 162146])->finished_ok(1009);
+
+# Plain alternative
 $t->get_ok('/echo')->status_is(200)->content_is('plain echo!');
 
-# GET /plain
-$t->get_ok('/plain')->status_is(200)->content_is('Nothing to see here!');
-
-# WebSocket /push
-$t->websocket_ok('/push')->message_is('push')->message_is('push')
-  ->message_is('push')->finish_ok;
-
-# WebSocket /push (again)
-$t->websocket_ok('/push')->message_unlike(qr/shift/)->message_isnt('shift')
-  ->message_like(qr/us/)->finish_ok;
-
-# GET /plain (again)
-$t->get_ok('/plain')->status_is(200)->content_is('Nothing to see here!');
-
-# WebSocket /echo (again)
-$t->websocket_ok('/echo')->send_ok('hello')->message_is('echo: hello')
+# JSON roundtrips
+$t->websocket_ok('/json')
+  ->send_ok({text => j({test => 23, snowman => '☃'})})
+  ->message_ok->json_message_is('' => {test => 24, snowman => '☃'})
+  ->json_message_has('/test')->json_message_hasnt('/test/2')
+  ->send_ok({binary => j([1, 2, 3])})
+  ->message_ok->json_message_is('' => [1, 2, 3, 4], 'right content')
+  ->send_ok({binary => j([1, 2, 3])})
+  ->message_ok->json_message_has('/2', 'has two elements')
+  ->json_message_is('/2' => 3)->json_message_hasnt('/5', 'not five elements')
   ->finish_ok;
 
-# WebSocket /echo (mixed)
+# Plain request
+$t->get_ok('/plain')->status_is(200)->content_is('Nothing to see here!');
+
+# Server push
+$t->websocket_ok('/push')->message_ok->message_is('push')
+  ->message_ok->message_is('push')->message_ok->message_is('push')->finish_ok;
+$t->websocket_ok('/push')->message_ok->message_unlike(qr/shift/)
+  ->message_ok->message_isnt('shift')->message_ok->message_like(qr/us/)
+  ->message_ok->message_unlike({binary => qr/push/})->finish_ok;
+
+# Another plain request
+$t->get_ok('/plain')->status_is(200)->content_is('Nothing to see here!');
+
+# Multiple roundtrips
+$t->websocket_ok('/echo')->send_ok('hello')
+  ->message_ok->message_is('echo: hello')->finish_ok;
 $t->websocket_ok('/echo')->send_ok('this')->send_ok('just')->send_ok('works')
-  ->message_is('echo: this')->message_is('echo: just')
-  ->message_is('echo: works')->finish_ok;
+  ->message_ok->message_is('echo: this')->message_ok->message_is('echo: just')
+  ->message_ok->message_is('echo: works')->message_like(qr/orks/)->finish_ok;
 
-# GET /plain (and again)
+# Another plain request
 $t->get_ok('/plain')->status_is(200)->content_is('Nothing to see here!');
 
-# WebSocket /unicode
-$t->websocket_ok('/unicode')->send_ok('hello')->message_is('♥: hello')
-  ->finish_ok;
-
-# WebSocket /unicode (multiple times)
+# Unicode roundtrips
+$t->websocket_ok('/unicode')->send_ok('hello')
+  ->message_ok->message_is('♥: hello')->finish_ok;
 $t->websocket_ok('/unicode')->send_ok('hello again')
-  ->message_is('♥: hello again')->send_ok('and one ☃ more time')
-  ->message_is('♥: and one ☃ more time')->finish_ok;
+  ->message_ok->message_is('♥: hello again')
+  ->send_ok('and one ☃ more time')
+  ->message_ok->message_is('♥: and one ☃ more time')->finish_ok;
 
-# WebSocket /bytes (binary frame and frame event)
+# Binary frame and events
 my $bytes = b("I ♥ Mojolicious")->encode('UTF-16LE')->to_string;
 $t->websocket_ok('/bytes');
 my $binary;
@@ -166,29 +203,43 @@ $t->tx->on(
     $binary++ if $frame->[4] == 2;
   }
 );
-$t->send_ok({binary => $bytes})->message_is($bytes);
+my $close;
+$t->tx->on(finish => sub { shift; $close = [@_] });
+$t->send_ok({binary => $bytes})->message_ok->message_is($bytes);
 ok $binary, 'received binary frame';
 $binary = undef;
-$t->send_ok({text => $bytes})->message_is($bytes)->finish_ok;
+$t->send_ok({text => $bytes})->message_ok->message_is($bytes);
 ok !$binary, 'received text frame';
+$t->finish_ok(1000 => 'Have a nice day!');
+is_deeply $close, [1000, 'Have a nice day!'], 'right status and message';
 
-# WebSocket /bytes (multiple times)
-$t->websocket_ok('/bytes')->send_ok({binary => $bytes})->message_is($bytes)
-  ->send_ok({binary => $bytes})->message_is($bytes)->finish_ok;
+# Binary roundtrips
+$t->websocket_ok('/bytes')->send_ok({binary => $bytes})
+  ->message_ok->message_is($bytes)->send_ok({binary => $bytes})
+  ->message_ok->message_is($bytes)->finish_ok;
 
-# WebSocket /once
-$t->websocket_ok('/once')->send_ok('hello')->message_is('ONE: hello')
-  ->message_is('TWO: hello')->send_ok('hello')->message_is('ONE: hello')
-  ->send_ok('hello')->message_is('ONE: hello')->finish_ok;
+# Two responses
+$t->websocket_ok('/once')->send_ok('hello')
+  ->message_ok->message_is('ONE: hello')->message_ok->message_is('TWO: hello')
+  ->send_ok('hello')->message_ok->message_is('ONE: hello')->send_ok('hello')
+  ->message_ok->message_is('ONE: hello')->finish_ok;
 
-# WebSocket /nested
+# Nested WebSocket
 $t->websocket_ok('/nested')->send_ok('hello')
-  ->message_is('nested echo: hello')->finish_ok;
+  ->message_ok->message_is('nested echo: hello')->finished_ok(1000);
 
-# GET /nested (plain alternative)
+# Test custom message
+$t->message([binary => 'foobarbaz'])->message_like(qr/bar/)
+  ->message_is({binary => 'foobarbaz'});
+
+# Nested WebSocket with cookie
+$t->websocket_ok('/nested')->send_ok('hello')
+  ->message_ok->message_is('nested echo: helloagain')->finished_ok(1000);
+
+# Nested plain request
 $t->get_ok('/nested')->status_is(200)->content_is('plain nested!');
 
-# POST /nested (another plain alternative)
+# Another nested plain request
 $t->post_ok('/nested')->status_is(200)->content_is('plain nested too!');
 
 done_testing();

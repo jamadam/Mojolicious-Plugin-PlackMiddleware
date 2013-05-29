@@ -119,14 +119,14 @@ our $VERSION = '0.26';
         for my $key (keys %headers) {
            my $value = $headers{$key};
            delete $headers{$key};
-           $key =~ s{-}{_};
+           $key =~ s{-}{_}g;
            $headers{'HTTP_'. uc $key} = $value;
         }
         
         return {
             %ENV,
             %headers,
-            'SERVER_PROTOCOL'   => 'HTTP/'. $mojo_req->version,
+            'SERVER_PROTOCOL'   => $base->protocol. '/'. $mojo_req->version,
             'SERVER_NAME'       => $base->host,
             'SERVER_PORT'       => $base->port,
             'REQUEST_METHOD'    => $mojo_req->method,

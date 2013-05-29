@@ -88,7 +88,7 @@ use utf8;
     {
         $ENV{MOJO_MODE} = 'production';
         my $t = Test::Mojo->new('FormData');
-		$t->post_form_ok('/index' => {a => 'b'});
+		$t->post_ok('/index' => {a => 'b'});
     }
 		{
 			package FormData;
@@ -116,7 +116,7 @@ use utf8;
     {
         $ENV{MOJO_MODE} = 'development';
         my $t = Test::Mojo->new('FormDataMultipart');
-		$t->post_form_ok('/index', '', {foo => 'bar'}, {'Content-Type' => 'multipart/form-data'})
+		$t->post_ok('/index', '', {foo => 'bar'}, {'Content-Type' => 'multipart/form-data'})
 			->status_is(200);
     }
 		{
