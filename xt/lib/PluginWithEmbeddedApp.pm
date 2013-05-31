@@ -9,6 +9,8 @@ sub register {
 package PluginWithEmbeddedApp::App;
 use Mojolicious::Lite;
 
+plugin plack_middleware => [];
+
 get '/foo';
 
 1;

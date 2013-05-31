@@ -20,7 +20,7 @@ sub development_mode {
 sub startup {
   my $self = shift;
   $self->plugin(plack_middleware => []);
-
+  
   # Template and static file class with lower precedence for production
   push @{$self->static->classes},   'MojoliciousTest';
   push @{$self->renderer->classes}, 'MojoliciousTest';

@@ -1,6 +1,5 @@
 use Mojo::Base -strict;
 
-# Disable IPv6 and libev
 BEGIN {
   $ENV{MOJO_NO_IPV6} = 1;
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
@@ -19,7 +18,7 @@ post '/upload' => sub {
   my $self    = shift;
   my $file    = $self->param('file');
   my $headers = $file->headers;
-  $self->render_text($file->filename
+  $self->render(text => $file->filename
       . $file->asset->slurp
       . $self->param('test')
       . ($headers->content_type  // '')
@@ -30,7 +29,10 @@ post '/upload' => sub {
 post '/multi' => sub {
   my $self = shift;
   my @uploads = map { $self->param($_) } $self->param('name');
-  $self->render_text(join '', map { $_->filename, $_->asset->slurp } @uploads);
+  $self->render(
+    text => join '',
+    map { $_->filename, $_->asset->slurp } @uploads
+  );
 };
 
 my $t = Test::Mojo->new;
