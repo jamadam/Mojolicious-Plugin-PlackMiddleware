@@ -52,7 +52,7 @@ use utf8;
 				});
 				
 				$self->routes->route('/default')->to(cb => sub{
-					$_[0]->render_text('default');
+					$_[0]->render(text => 'default');
 				});
 			}
 		}

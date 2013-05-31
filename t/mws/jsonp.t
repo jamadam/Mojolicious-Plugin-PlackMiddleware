@@ -48,11 +48,11 @@ use utf8;
 				
 				$self->routes->route('/hash')->to(cb => sub{
                     my $json = {foo => 'bar'};
-					$_[0]->render_json($json);
+					$_[0]->render(json => $json);
 				});
 				$self->routes->route('/array')->to(cb => sub{
                     my $json = ['hoo', 'bar'];
-					$_[0]->render_json($json);
+					$_[0]->render(json => $json);
 				});
 			}
 		}

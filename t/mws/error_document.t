@@ -49,7 +49,7 @@ use utf8;
 				$self->routes->route('/*')->to(cb => sub{
 					my $c = shift;
 					my $status = ($c->req->url->path =~ m!status/(\d+)!)[0] || 200;
-					$c->render_text("Error: $status");
+					$c->render(text => "Error: $status");
 					$c->rendered($status);
 				});
 			}

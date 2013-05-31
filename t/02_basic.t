@@ -51,7 +51,7 @@ use utf8;
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
-					$_[0]->render_text('original');
+					$_[0]->render(text => 'original');
 				});
 			}
 		}
@@ -80,7 +80,7 @@ use utf8;
 					$_[0]->render_not_found;
 				});
 				$self->routes->route('/index2')->to(cb => sub{
-					$_[0]->render_text('index2');
+					$_[0]->render(text => 'index2');
 				});
 			}
 		}
@@ -108,7 +108,7 @@ use utf8;
 					my $content_type = $_[0]->req->headers->header('content-type');
 					is($content_type, 'application/x-www-form-urlencoded', 'right content type');
 					is($_[0]->req->body, 'a=b', 'req body set');
-					$_[0]->render_text('original');
+					$_[0]->render(text => 'original');
 				});
 			}
 		}
@@ -137,7 +137,7 @@ use utf8;
 					my $content_type = $_[0]->req->headers->header('content-type');
 					like($content_type, qr{multipart/form-data}, 'right content type');
 					is($_[0]->req->body_params->param('foo'), 'bar', 'right body param');
-					$_[0]->render_text('original');
+					$_[0]->render(text => 'original');
 				});
 			}
 		}
@@ -163,7 +163,7 @@ use utf8;
 				]);
 				
 				$self->routes->route('/index.html')->to(cb => sub{
-					$_[0]->render_text('ok');
+					$_[0]->render(text => 'ok');
 				});
 			}
 		}
@@ -191,7 +191,7 @@ use utf8;
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
-					$_[0]->render_text('original');
+					$_[0]->render(text => 'original');
 				});
 			}
 		}
@@ -218,7 +218,7 @@ use utf8;
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
-					$_[0]->render_text('original');
+					$_[0]->render(text => 'original');
 				});
 			}
 		}
@@ -245,7 +245,7 @@ use utf8;
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
-					$_[0]->render_text('1');
+					$_[0]->render(text => '1');
 				});
 			}
 		}
@@ -273,7 +273,7 @@ use utf8;
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
-					$_[0]->render_text('日本語');
+					$_[0]->render(text => '日本語');
 				});
 			}
 		}
@@ -300,7 +300,7 @@ use utf8;
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
-					$_[0]->render_text('original');
+					$_[0]->render(text => 'original');
 				});
 			}
 		}
@@ -333,7 +333,7 @@ use utf8;
 				]);
 				
 				$self->routes->route('/index')->to(cb => sub{
-					$_[0]->render_text('original');
+					$_[0]->render(text => 'original');
 				});
 			}
 		}
@@ -367,7 +367,7 @@ use utf8;
 				$self->plugin(plack_middleware => ["Auth::Basic", {authenticator => sub {1}}]);
 				
 				$self->routes->route('/index')->to(cb => sub{
-					$_[0]->render_text('original');
+					$_[0]->render(text => 'original');
 				});
 			}
 		}
