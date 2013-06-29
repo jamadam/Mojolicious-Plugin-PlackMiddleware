@@ -9,8 +9,6 @@ my %params = (
     ABSTRACT_FROM => 'lib/Mojolicious/Plugin/PlackMiddleware.pm',
     LICENSE       => 'perl',
     PREREQ_PM     => {
-    },
-    BUILD_REQUIRES => {
         'Test::More'          	=> '0.47',
         'Test::UseAllModules' 	=> '0.10',
         'Plack' 				=> '0.9945',
