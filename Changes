@@ -1,6 +1,9 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
-0.28 2013/06/01
+0.29 2013/06/29
+
+0.28 2013/06/29
+  - Updated manifest and remved MYMETA.*
 
 0.27 2013/06/01
   - Updated tests for new test API.
