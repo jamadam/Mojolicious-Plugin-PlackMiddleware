@@ -39,8 +39,8 @@ get '/bye' => sub {
   my $self = shift;
   my $name = $self->stash('name');
   my $nb   = '';
-  $self->render_later;
-  $self->ua->app(main::app())->get(
+  $self->ua->server->app(main::app());
+  $self->ua->get(
     '/hello/hello' => sub {
       my ($ua, $tx) = @_;
       $self->render(text => $tx->res->body . "$name! $nb");
@@ -173,9 +173,11 @@ $t->get_ok('/just/works/too')->status_is(200)->content_is("It just works!\n");
 
 # Template from myapp.pl
 $t->get_ok('/x/1/')->status_is(200)->content_is(<<'EOF');
+myapp
 works ♥!Insecure!Insecure!
 
 too!works!!!Mojolicious::Plugin::Config::Sandbox
+<a href="/x/1/">Test</a>
 <form action="/x/1/%E2%98%83">
   <input type="submit" value="☃" />
 </form>
@@ -197,16 +199,18 @@ $t->get_ok('/x/1/url/☃')->status_is(200)
 
 # Route to template from myapp.pl
 $t->get_ok('/x/1/template/menubar')->status_is(200)
-  ->content_is("works ♥!Insecure!Insecure!\n");
+  ->content_is("myapp\nworks ♥!Insecure!Insecure!\n");
 
 # Missing template from myapp.pl
 $t->get_ok('/x/1/template/does_not_exist')->status_is(404);
 
 # Template from myapp.pl with unicode prefix
 $t->get_ok('/x/♥/')->status_is(200)->content_is(<<'EOF');
+myapp
 works ♥!Insecure!Insecure!
 
 too!works!!!Mojolicious::Plugin::Config::Sandbox
+<a href="/x/%E2%99%A5/">Test</a>
 <form action="/x/%E2%99%A5/%E2%98%83">
   <input type="submit" value="☃" />
 </form>
@@ -228,13 +232,18 @@ $t->get_ok('/x/♥/url/☃')->status_is(200)
 
 # Route to template from myapp.pl with unicode prefix
 $t->get_ok('/x/♥/template/menubar')->status_is(200)
-  ->content_is("works ♥!Insecure!Insecure!\n");
+  ->content_is("myapp\nworks ♥!Insecure!Insecure!\n");
 
 # Missing template from myapp.pl with unicode prefix
 $t->get_ok('/x/♥/template/does_not_exist')->status_is(404);
 
 # A little bit of everything from myapp2.pl
-$t->get_ok('/y/1')->status_is(200)->content_is("works 4!\nInsecure too!");
+$t->get_ok('/y/1')->status_is(200)
+  ->content_is("myapp2\nworks 4!\nInsecure too!");
+
+# Route to template from myapp.pl again (helpers sharing the same name)
+$t->get_ok('/x/1/template/menubar')->status_is(200)
+  ->content_is("myapp\nworks ♥!Insecure!Insecure!\n");
 
 # Caching helper from myapp2.pl
 $t->get_ok('/y/1/cached?cache=foo')->status_is(200)->content_is('foo');
@@ -246,7 +255,8 @@ $t->get_ok('/y/1/cached?cache=fail')->status_is(200)->content_is('foo');
 $t->get_ok('/y/1/2')->status_is(404);
 
 # myapp2.pl with unicode prefix
-$t->get_ok('/y/♥')->status_is(200)->content_is("works 3!\nInsecure too!");
+$t->get_ok('/y/♥')->status_is(200)
+  ->content_is("myapp2\nworks 3!\nInsecure too!");
 
 # Caching helper from myapp2.pl with unicode prefix
 $t->get_ok('/y/♥/cached?cache=bar')->status_is(200)->content_is('bar');
@@ -263,9 +273,11 @@ $t->get_ok('/host')->status_is(200)->content_is('main application!');
 # Template from myapp.pl with domain
 $t->get_ok('/' => {Host => 'mojolicious.org'})->status_is(200)
   ->content_is(<<'EOF');
+myapp
 works ♥!Insecure!Insecure!
 
 too!works!!!Mojolicious::Plugin::Config::Sandbox
+<a href="/">Test</a>
 <form action="/%E2%98%83">
   <input type="submit" value="☃" />
 </form>
@@ -278,9 +290,11 @@ $t->get_ok('/host' => {Host => 'mojolicious.org'})->status_is(200)
 # Template from myapp.pl with domain again
 $t->get_ok('/' => {Host => 'mojolicio.us'})->status_is(200)
   ->content_is(<<'EOF');
+myapp
 works ♥!Insecure!Insecure!
 
 too!works!!!Mojolicious::Plugin::Config::Sandbox
+<a href="/">Test</a>
 <form action="/%E2%98%83">
   <input type="submit" value="☃" />
 </form>
@@ -293,9 +307,11 @@ $t->get_ok('/host' => {Host => 'mojolicio.us'})->status_is(200)
 # Template from myapp.pl with wildcard domain
 $t->get_ok('/' => {Host => 'example.com'})->status_is(200)
   ->content_is(<<'EOF');
+myapp
 works ♥!Insecure!Insecure!
 
 too!works!!!Mojolicious::Plugin::Config::Sandbox
+<a href="/">Test</a>
 <form action="/%E2%98%83">
   <input type="submit" value="☃" />
 </form>
@@ -316,9 +332,11 @@ $t->get_ok('/host' => {Host => 'foo.bar.example.com'})->status_is(200)
 # Template from myapp.pl with wildcard domain and unicode prefix
 $t->get_ok('/♥/123/' => {Host => 'foo-bar.de'})->status_is(200)
   ->content_is(<<'EOF');
+myapp
 works ♥!Insecure!Insecure!
 
 too!works!!!Mojolicious::Plugin::Config::Sandbox
+<a href="/%E2%99%A5/123/">Test</a>
 <form action="/%E2%99%A5/123/%E2%98%83">
   <input type="submit" value="☃" />
 </form>

@@ -20,8 +20,8 @@ app->renderer->paths->[0] = app->home->rel_dir('does_not_exist');
 
 # Reverse filter
 hook after_render => sub {
-  my ($self, $output, $format) = @_;
-  return unless $self->stash->{reverse};
+  my ($c, $output, $format) = @_;
+  return unless $c->stash->{reverse};
   $$output = reverse $$output . $format;
 };
 
@@ -71,11 +71,12 @@ get '/plain/reverse' => {text => 'Hello!', format => 'foo', reverse => 1};
 
 get '/outerlayout' => sub {
   my $self = shift;
-  $self->render(
-    template => 'outerlayout',
-    layout   => 'layout',
-    handler  => 'ep'
-  );
+  $self->render(template => 'outerlayout', layout => 'layout');
+};
+
+get '/outerextends' => sub {
+  my $self = shift;
+  $self->render(template => 'outerlayout', extends => 'layouts/layout');
 };
 
 get '/outerlayouttwo' => {layout => 'layout'} => sub {
@@ -109,6 +110,13 @@ get '/data' => {data => 0};
 
 my $t = Test::Mojo->new;
 
+# "0" content reassignment
+my $c = $t->app->controller_class->new;
+$c->content(foo => '0');
+is $c->content('foo'), '0', 'right content';
+$c->content(foo => '1');
+is $c->content('foo'), '0', 'right content';
+
 # Template with layout
 $t->get_ok('/works')->status_is(200)
   ->content_type_is('text/html;charset=UTF-8')
@@ -125,7 +133,8 @@ $t->get_ok('/works?blue=1')->status_is(200)
   ->content_is("BlueJust worksThis <template> just works!\n\n");
 
 # Mixed formats
-$t->get_ok('/mixed')->status_is(200)->content_type_is('text/plain')
+$t->get_ok('/mixed')->status_is(200)
+  ->content_type_is('text/plain;charset=UTF-8')
   ->content_is("Mixed formats\n\n");
 
 # Missing template
@@ -183,7 +192,7 @@ $t->get_ok('/plugin_with_template')->status_is(200)
 # Nested partial templates
 $t->get_ok('/nested-includes')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
-  ->content_is("layouted Nested Hello\n[\n  1,\n  2\n]\nthere<br>!\n\n\n\n");
+  ->content_is("layouted Nested <Hello>\n[\n  1,\n  2\n]\nthere<br>!\n\n\n\n");
 
 # Partial template with localized stash values
 $t->get_ok('/localized/include')->status_is(200)
@@ -199,12 +208,17 @@ $t->get_ok('/plain/reverse')->status_is(200)
 # Layout in render call
 $t->get_ok('/outerlayout')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
-  ->content_is("layouted Hello\n[\n  1,\n  2\n]\nthere<br>!\n\n\n");
+  ->content_is("layouted <Hello>\n[\n  1,\n  2\n]\nthere<br>!\n\n\n");
+
+# Extends in render call
+$t->get_ok('/outerextends')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->content_is("layouted <Hello>\n[\n  1,\n  2\n]\nthere<br>!\n\n\n");
 
 # Layout in route
 $t->get_ok('/outerlayouttwo')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
-  ->content_is("layouted Hello\n[\n  1,\n  2\n]\nthere<br>!\n\n\n");
+  ->content_is("layouted <Hello>\n[\n  1,\n  2\n]\nthere<br>!\n\n\n");
 
 # Partial template with layout
 $t->get_ok('/outerinnerlayout')->status_is(200)
@@ -271,7 +285,6 @@ Exception happened!
 Not found happened!
 
 @@ template_inheritance.html.ep
-% use Mojo::ByteStream 'b';
 % layout 'template_inheritance';
 % title 'Works!';
 <% content header => begin =%>
@@ -314,22 +327,22 @@ layout_with_template
 Nested <%= include 'outerlayout' %>
 
 @@ localized.html.ep
-% layout 'localized1';
+% extends 'localized1';
 <%= $test %>
-<%= include 'localized_partial', test => 321, layout => 'localized2' %>
+<%= include 'localized_partial', test => 321, extends => 'localized2' %>
 <%= $test %>
 
 @@ localized_partial.html.ep
 <%= $test %>
 
-@@ layouts/localized1.html.ep
+@@ localized1.html.ep
 localized1 <%= content %>
 
-@@ layouts/localized2.html.ep
+@@ localized2.html.ep
 localized2 <%= content %>
 
 @@ outerlayout.html.ep
-Hello
+%= c(qw(> o l l e H <))->reverse->join
 <%= $self->render('outermenu', partial => 1) %>
 
 @@ outermenu.html.ep

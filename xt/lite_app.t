@@ -41,7 +41,8 @@ plugin plack_middleware => [];
 
 get '/☃' => sub {
   my $self = shift;
-  $self->render(text => $self->url_for . $self->url_for('current'));
+  $self->render(
+    text => $self->url_for . $self->url_for({}) . $self->url_for('current'));
 };
 
 get '/uni/aäb' => sub {
@@ -49,9 +50,9 @@ get '/uni/aäb' => sub {
   $self->render(text => $self->url_for);
 };
 
-get '/unicode/:stuff' => sub {
+get '/unicode/:0' => sub {
   my $self = shift;
-  $self->render(text => $self->param('stuff') . $self->url_for);
+  $self->render(text => $self->param('0') . $self->url_for);
 };
 
 get '/' => 'root';
@@ -60,6 +61,9 @@ get '/alternatives/:char' => [char => [qw(☃ ♥)]] => sub {
   my $self = shift;
   $self->render(text => $self->url_for);
 };
+
+get '/optional/:middle/placeholder' =>
+  {middle => 'none', inline => '<%= $middle %>-<%= url_for =%>'};
 
 get '/alterformat' => [format => ['json']] => {format => 'json'} => sub {
   my $self = shift;
@@ -166,11 +170,10 @@ get '/stream' => sub {
   $self->rendered;
 };
 
-my $finished;
 get '/finished' => sub {
   my $self = shift;
-  $self->on(finish => sub { $finished += 2 });
-  $finished = 1;
+  $self->on(finish => sub { shift->stash->{finished} *= 2 });
+  $self->stash->{finished} = 1;
   $self->render(text => 'so far so good!');
 };
 
@@ -360,8 +363,10 @@ get '/redirect_named' => sub {
   shift->redirect_to('index', format => 'txt')->render(text => 'Redirecting!');
 };
 
+get '/redirect_twice' => sub { shift->redirect_to('/redirect_named') };
+
 get '/redirect_no_render' => sub {
-  shift->redirect_to('index', format => 'txt');
+  shift->redirect_to('index', {format => 'txt'});
 };
 
 get '/redirect_callback' => sub {
@@ -443,12 +448,15 @@ my $t = Test::Mojo->new;
 is $t->app->test_helper2, 'Mojolicious::Controller', 'right class';
 is $t->app, app->commands->app, 'applications are equal';
 is $t->app->moniker, 'lite_app', 'right moniker';
+my $log = '';
+my $cb = $t->app->log->on(message => sub { $log .= pop });
+is $t->app->secrets->[0], $t->app->moniker, 'secret defaults to moniker';
+like $log, qr/Your secret passphrase needs to be changed!!!/, 'right message';
+$t->app->log->unsubscribe(message => $cb);
 
 # Unicode snowman
-$t->get_ok('/☃')->status_is(200)->content_is('/%E2%98%83/%E2%98%83');
-
-# Unicode snowman with trailing slash
-$t->get_ok('/☃/')->status_is(200)->content_is('/%E2%98%83//%E2%98%83/');
+$t->get_ok('/☃')->status_is(200)
+  ->content_is('/%E2%98%83/%E2%98%83/%E2%98%83');
 
 # Umlaut
 $t->get_ok('/uni/aäb')->status_is(200)->content_is('/uni/a%C3%A4b');
@@ -516,6 +524,16 @@ $t->get_ok('/alternatives')->status_is(404)
 $t->get_ok('/alternatives/test')->status_is(404)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is("Oops!\n");
 
+# Optional placeholder in the middle
+$t->get_ok('/optional/test/placeholder')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->content_is('test-/optional/test/placeholder');
+
+# Optional placeholder in the middle without value
+$t->get_ok('/optional/placeholder')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->content_is('none-/optional/none/placeholder');
+
 # No format
 $t->get_ok('/alterformat')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is('json');
@@ -579,7 +597,8 @@ $t->get_ok('/reserved?data=just-works&json=test')->status_is(200)
 # Exception in inline template
 $t->get_ok('/inline/exception')->status_is(500)
   ->header_is(Server => 'Mojolicious (Perl)')
-  ->content_is("Died at inline template line 1.\n\n");
+  ->content_is(
+  "Died at inline template 6635c7011166fa11bb23c21912900ea9 line 1.\n\n");
 
 # Exception in template from data section
 $t->get_ok('/data/exception')->status_is(500)
@@ -647,9 +666,9 @@ $t->get_ok('/regex/in/template')->status_is(200)
   ->content_is("test(test)(\\Qtest\\E)(\n");
 
 # Chunked response with basic auth
-$t->get_ok(
-  $t->ua->app_url->userinfo('sri:foo')->path('/stream')->query(foo => 'bar'))
-  ->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
+my $url = $t->ua->server->url->userinfo('sri:foo')->path('/stream')
+  ->query(foo => 'bar');
+$t->get_ok($url)->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
   ->content_like(qr!^foobarsri:foohttp://localhost:\d+/stream$!);
 
 # Not ajax
@@ -662,9 +681,11 @@ $t->get_ok('/maybe/ajax' => {'X-Requested-With' => 'XMLHttpRequest'})
   ->content_is('is ajax');
 
 # With finish event
+my $stash;
+$t->app->plugins->once(before_dispatch => sub { $stash = shift->stash });
 $t->get_ok('/finished')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is('so far so good!');
-is $finished, 3, 'finished';
+is $stash->{finished}, 2, 'finish event has been emitted once';
 
 # IRI
 $t->get_ok('/привет/мир')->status_is(200)
@@ -729,8 +750,13 @@ $t->get_ok('/source')->status_is(200)->header_isnt('X-Missing' => 1)
   ->content_like(qr!get_ok\('/source!);
 
 # File does not exist
+$log = '';
+$cb = $t->app->log->on(message => sub { $log .= pop });
 $t->get_ok('/source?fail=1')->status_is(404)->header_is('X-Missing' => 1)
   ->content_is("Oops!\n");
+like $log, qr/File "does_not_exist.txt" not found, public directory missing\?/,
+  'right message';
+$t->app->log->unsubscribe(message => $cb);
 
 # With body and max message size
 {
@@ -886,7 +912,7 @@ $t->get_ok('/helper' => {'User-Agent' => 'Explorer'})->status_is(200)
 
 # Exception in EP template
 $t->get_ok('/eperror')->status_is(500)
-  ->header_is(Server => 'Mojolicious (Perl)')->content_like(qr/\$c/);
+  ->header_is(Server => 'Mojolicious (Perl)')->content_like(qr/\$unknown/);
 
 # Subrequest
 $t->get_ok('/subrequest')->status_is(200)
@@ -918,6 +944,17 @@ $t->get_ok('/redirect_named')->status_is(302)
   ->header_is(Server           => 'Mojolicious (Perl)')
   ->header_is('Content-Length' => 12)
   ->header_like(Location => qr!/template.txt$!)->content_is('Redirecting!');
+
+# Redirect twice
+$t->ua->max_redirects(3);
+$t->get_ok('/redirect_twice')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->text_is('div#☃' => 'Redirect works!');
+my $redirects = $t->tx->redirects;
+is scalar @$redirects, 2, 'two redirects';
+is $redirects->[0]->req->url->path, '/redirect_twice', 'right path';
+is $redirects->[1]->req->url->path, '/redirect_named', 'right path';
+$t->ua->max_redirects(0);
 
 # Redirect without rendering
 $t->get_ok('/redirect_no_render')->status_is(302)
@@ -1087,7 +1124,7 @@ app layout <%= content %><%= app->mode %>
 (<%= agent %>)\
 
 @@ eperror.html.ep
-%= $c->foo('bar');
+%= $unknown->foo('bar');
 
 @@ favicon.ico
 Not a favicon!
