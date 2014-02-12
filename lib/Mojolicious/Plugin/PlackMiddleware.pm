@@ -178,6 +178,12 @@ our $VERSION = '0.29';
         }
         my @body;
         my $offset = 0;
+        
+        # don't know why but this block makes long polling tests to pass
+        if ($mojo_res->content->is_dynamic && $mojo_res->content->{delay}) {
+            $mojo_res->get_body_chunk(0);
+        }
+        
         while (length(my $chunk = $mojo_res->get_body_chunk($offset))) {
             push(@body, $chunk);
             $offset += length $chunk;
