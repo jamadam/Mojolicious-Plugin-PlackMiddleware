@@ -53,17 +53,17 @@ use Scalar::Util 'weaken';
         }
         
         $app->hook('around_dispatch' => sub {
-            my ($inside_app, $c) = @_;
+            my ($next, $c) = @_;
             
             if ($c->tx->req->error) {
-                $inside_app->();
+                $next->();
                 return;
             }
             
             my $plack_env = mojo_req_to_psgi_env($c->req);
             
             local $plack_env->{'mojo.c'} = $c;
-            local $plack_env->{'mojo.inside_app'} = $inside_app;
+            local $plack_env->{'mojo.inside_app'} = $next;
             
             local $plack_env->{'psgi.errors'} =
                 Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
