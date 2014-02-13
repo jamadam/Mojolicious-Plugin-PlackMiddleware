@@ -6,6 +6,7 @@ use Plack::Util;
 use Mojo::Message::Request;
 use Mojo::Message::Response;
 our $VERSION = '0.29';
+use Scalar::Util 'weaken';
     
     ### ---
     ### register
@@ -162,6 +163,7 @@ our $VERSION = '0.29';
         
         my $asset = $mojo_res->content->asset;
         Plack::Util::foreach($psgi_res->[2], sub {$asset->add_chunk($_[0])});
+        weaken($psgi_res);
         return $mojo_res;
     }
     
