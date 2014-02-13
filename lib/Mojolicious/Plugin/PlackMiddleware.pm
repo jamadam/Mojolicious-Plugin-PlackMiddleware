@@ -14,12 +14,11 @@ use Scalar::Util 'weaken';
     sub register {
         my ($self, $app, $mws) = @_;
         
-        my $inside_app;
-        
         my $plack_app = sub {
             my $env = shift;
             my $c = $env->{'mojo.c'};
             my $tx = $c->tx;
+            my $inside_app = $env->{'mojo.inside_app'};
             
             $tx->req(psgi_env_to_mojo_req($env));
             
@@ -54,7 +53,7 @@ use Scalar::Util 'weaken';
         }
         
         $app->hook('around_dispatch' => sub {
-            ($inside_app, my $c) = @_;
+            my ($inside_app, $c) = @_;
             
             if ($c->tx->req->error) {
                 $inside_app->();
@@ -64,6 +63,7 @@ use Scalar::Util 'weaken';
             my $plack_env = mojo_req_to_psgi_env($c->req);
             
             local $plack_env->{'mojo.c'} = $c;
+            local $plack_env->{'mojo.inside_app'} = $inside_app;
             
             local $plack_env->{'psgi.errors'} =
                 Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
