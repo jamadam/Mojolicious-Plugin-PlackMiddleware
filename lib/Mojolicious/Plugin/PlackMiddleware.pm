@@ -16,14 +16,12 @@ use Scalar::Util 'weaken';
         
         my $plack_app = sub {
             my $env = shift;
-            my $c = $env->{'mojo.c'};
-            my $tx = $c->tx;
-            my $inside_app = $env->{'mojo.inside_app'};
+            my $tx = $env->{'mojo.c'}->tx;
             
             $tx->req(psgi_env_to_mojo_req($env));
             
             if ($env->{'mojo.routed'}) {
-                my $stash = $c->stash;
+                my $stash = $env->{'mojo.c'}->stash;
                 for my $key (grep {$_ =~ qr{^mojo\.}} keys %{$stash}) {
                     delete $stash->{$key};
                 }
@@ -31,9 +29,9 @@ use Scalar::Util 'weaken';
                 my $sever = $tx->res->headers->header('server');
                 $tx->res(Mojo::Message::Response->new);
                 $tx->res->headers->header('server', $sever);
-                $inside_app->();
+                $env->{'mojo.inside_app'}->();
             } else {
-                $inside_app->();
+                $env->{'mojo.inside_app'}->();
                 $env->{'mojo.routed'} = 1;
             }
             
@@ -57,23 +55,17 @@ use Scalar::Util 'weaken';
             
             if ($c->tx->req->error) {
                 $next->();
-                return;
-            }
-            
-            my $plack_env = mojo_req_to_psgi_env($c->req);
-            
-            local $plack_env->{'mojo.c'} = $c;
-            local $plack_env->{'mojo.inside_app'} = $next;
-            
-            local $plack_env->{'psgi.errors'} =
-                Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
-                    $c->app->log->debug(shift);
-                });
-            
-            $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
-            
-            if (! $plack_env->{'mojo.routed'}) {
-                $c->rendered;
+            } else {
+                my $plack_env = mojo_req_to_psgi_env($c->req);
+                $plack_env->{'mojo.c'} = $c;
+                $plack_env->{'mojo.inside_app'} = $next;
+                $plack_env->{'psgi.errors'} =
+                    Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
+                        $c->app->log->debug(shift);
+                    });
+                
+                $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
+                $c->rendered if (! $plack_env->{'mojo.routed'});
             }
         });
     }
@@ -238,6 +230,7 @@ use Mojo::Base -base;
 ### ---
 package Mojolicious::Plugin::PlackMiddleware::_Cond;
 use strict;
+use warnings;
 use parent qw(Plack::Middleware::Conditional);
     
     sub call {
