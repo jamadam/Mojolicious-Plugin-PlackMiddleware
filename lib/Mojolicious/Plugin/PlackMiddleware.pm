@@ -148,7 +148,7 @@ use Scalar::Util 'weaken';
         $mojo_res->code($psgi_res->[0]);
         my $headers = $mojo_res->headers;
         while (scalar @{$psgi_res->[1]}) {
-            $headers->header(shift @{$psgi_res->[1]} => shift @{$psgi_res->[1]});
+            $headers->add(shift @{$psgi_res->[1]} => shift @{$psgi_res->[1]});
         }
         
         $headers->remove('Content-Length'); # should be set by mojolicious later
