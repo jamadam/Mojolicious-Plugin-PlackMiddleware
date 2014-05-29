@@ -5,7 +5,7 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Plack::Util;
 use Mojo::Message::Request;
 use Mojo::Message::Response;
-our $VERSION = '0.29';
+our $VERSION = '0.30';
 use Scalar::Util 'weaken';
     
     ### ---
