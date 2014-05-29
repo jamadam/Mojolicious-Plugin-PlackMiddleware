@@ -1,6 +1,9 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
 0.29 2013/06/29
+  - Fixed a bug on multiple headers with the same name.
+  - Ported compat tests from mojo v4.90
+  - Improved internal code.
 
 0.28 2013/06/29
   - Updated manifest and remved MYMETA.*
