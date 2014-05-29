@@ -9,17 +9,17 @@ my %params = (
     ABSTRACT_FROM => 'lib/Mojolicious/Plugin/PlackMiddleware.pm',
     LICENSE       => 'perl',
     PREREQ_PM     => {
-        'Test::More'          	=> '0.47',
-        'Test::UseAllModules' 	=> '0.10',
-        'Plack' 				=> '0.9945',
-        'Mojolicious'    	  	=> '3.00',
+        'Test::More'            => '0.47',
+        'Test::UseAllModules'   => '0.10',
+        'Plack'                 => '0.9945',
+        'Mojolicious'           => '4.90',
     },
     META_MERGE => {
         resources => {
             repository => '',
         },
     },
-	test => {TESTS => 't/*.t t/*/*.t'},
+    test => {TESTS => 't/*.t t/*/*.t'},
 );
 
 my $eumm = $ExtUtils::MakeMaker::VERSION;

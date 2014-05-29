@@ -1,6 +1,7 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
 0.30 2013/06/29
+  - Updated depencency.
 
 0.29 2013/06/29
   - Fixed a bug on multiple headers with the same name.
