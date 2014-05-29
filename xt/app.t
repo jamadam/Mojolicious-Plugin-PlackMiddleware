@@ -62,6 +62,7 @@ is $t->app->moniker, 'mojolicious_test', 'right moniker';
 is $t->app->secrets->[0], $t->app->moniker, 'secret defaults to moniker';
 is $t->app->renderer->template_handler(
   {template => 'foo/bar/index', format => 'html'}), 'epl', 'right handler';
+is $t->app->build_controller->req->url, '', 'no URL';
 
 # Missing methods and functions (AUTOLOAD)
 eval { $t->app->missing };
@@ -70,7 +71,7 @@ like $@,
   'right error';
 eval { Mojolicious::missing() };
 like $@, qr/^Undefined subroutine &Mojolicious::missing called/, 'right error';
-my $c = $t->app->controller_class->new;
+my $c = $t->app->build_controller;
 eval { $c->missing };
 like $@, qr/^Can't locate object method "missing" via package "@{[ref $c]}"/,
   'right error';
@@ -271,13 +272,9 @@ $t->get_ok('/foo/test' => {'X-Test' => 'Hi there!'})->status_is(200)
   ->header_is(Server     => 'Mojolicious (Perl)')->content_like(qr!/bar/test!);
 
 # Foo::index
-$log = '';
-$cb = $t->app->log->on(message => sub { $log .= pop });
 $t->get_ok('/foo' => {'X-Test' => 'Hi there!'})->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
   ->content_like(qr|<body>\s+23\nHello Mojo from the template /foo! He|);
-like $log, qr/Careful, "handler" is a reserved stash value\./, 'right message';
-$t->app->log->unsubscribe(message => $cb);
 
 # Foo::Bar::index
 $t->get_ok('/foo-bar' => {'X-Test' => 'Hi there!'})->status_is(200)
