@@ -9,7 +9,7 @@ perl:
 branches:
   only:
     - master
-    - develop
+    - prototype
 install:
   - "cpanm -n Test::Pod Test::Pod::Coverage"
   - "cpanm -n --installdeps ."
