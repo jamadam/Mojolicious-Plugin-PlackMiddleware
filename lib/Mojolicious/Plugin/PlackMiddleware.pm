@@ -168,7 +168,7 @@ use Scalar::Util 'weaken';
         my $headers = $mojo_res->content->headers;
         my @headers;
         for my $name (@{$headers->names}) {
-            push @headers, $name => join ', ', map {join ', ', @$_} $headers->header($name);
+            push @headers, $name => $headers->header($name);
         }
         my @body;
         my $offset = 0;
