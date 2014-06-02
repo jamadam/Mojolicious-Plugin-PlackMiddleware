@@ -113,6 +113,7 @@ ok $t->app->routes->is_hidden('render_later'),     'is hidden';
 ok $t->app->routes->is_hidden('render_maybe'),     'is hidden';
 ok $t->app->routes->is_hidden('render_not_found'), 'is hidden';
 ok $t->app->routes->is_hidden('render_static'),    'is hidden';
+ok $t->app->routes->is_hidden('render_to_string'), 'is hidden';
 ok $t->app->routes->is_hidden('rendered'),         'is hidden';
 ok $t->app->routes->is_hidden('req'),              'is hidden';
 ok $t->app->routes->is_hidden('res'),              'is hidden';
@@ -351,7 +352,8 @@ $t->get_ok('/' => {'X-Test' => 'Hi there!'})->status_is(404)
 
 # Static file /another/file (no extension)
 $t->get_ok('/another/file')->status_is(200)
-  ->header_is(Server => 'Mojolicious (Perl)')->content_type_is('text/plain')
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->content_type_is('text/plain;charset=UTF-8')
   ->content_like(qr/Hello Mojolicious!/);
 
 # Static directory /another
