@@ -14,6 +14,10 @@ my %params = (
         'Plack'                 => '0.9945',
         'Mojolicious'           => '5.02',
     },
+    BUILD_REQUIRES => {
+        'Test::More'            => '0.47',
+        'Test::UseAllModules'   => '0.10',
+    },
     META_MERGE => {
         resources => {
             repository => '',
