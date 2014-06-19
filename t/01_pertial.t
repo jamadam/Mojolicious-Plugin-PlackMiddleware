@@ -50,7 +50,7 @@ use Test::More tests => 10;
         Mojolicious::Plugin::PlackMiddleware::psgi_res_to_mojo_res($psgi_res);
     
     is_deeply(
-        $mojo_res->headers->to_hash(1), {a =>[[1],[2]], b => [[3]], c => [[4]]});
+        $mojo_res->headers->to_hash(1), {a =>[1,2], b => [3], c => [4]});
 }
 
 1;

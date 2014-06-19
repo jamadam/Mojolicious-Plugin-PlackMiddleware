@@ -12,7 +12,7 @@ my %params = (
         'Test::More'            => '0.47',
         'Test::UseAllModules'   => '0.10',
         'Plack'                 => '0.9945',
-        'Mojolicious'           => '5.02',
+        'Mojolicious'           => '5.08',
     },
     BUILD_REQUIRES => {
         'Test::More'            => '0.47',
