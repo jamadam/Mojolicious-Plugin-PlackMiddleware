@@ -1,6 +1,9 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
+0.33 2014/06/20
+
 0.32 2014/06/20
+  - Updated partial test for mojo v5.08
   - Set CPAN no_index
 
 0.31 2014/06/02
