@@ -22,6 +22,9 @@ my %params = (
         resources => {
             repository => '',
         },
+        no_index => {
+            directory => ['t', 'xt'],
+        },
     },
     test => {TESTS => 't/*.t t/*/*.t'},
 );

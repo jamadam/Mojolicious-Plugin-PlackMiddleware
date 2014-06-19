@@ -1,6 +1,9 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
-0.31 2013/06/29
+0.32 2014/06/20
+  - Set CPAN no_index
+
+0.31 2014/06/02
   - Updated header manipulation for new core api
 
 0.30 2013/06/29
