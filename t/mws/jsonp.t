@@ -23,7 +23,7 @@ use Test::More tests => 16;
     $t->get_ok('/hash?json.p=foo')
         ->status_is(200)
         ->header_is('Content-Type', 'text/javascript')
-        ->content_is(q(foo({"foo":"bar"})));
+        ->content_is(q(/**/foo({"foo":"bar"})));
     $t->get_ok('/array')
         ->status_is(200)
         ->header_is('Content-Type', 'application/json')
@@ -31,7 +31,7 @@ use Test::More tests => 16;
     $t->get_ok('/array?json.p=foo')
         ->status_is(200)
         ->header_is('Content-Type', 'text/javascript')
-        ->content_is(q(foo(["hoo","bar"])));
+        ->content_is(q(/**/foo(["hoo","bar"])));
 }
     {
         package SomeApp;

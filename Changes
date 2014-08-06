@@ -1,6 +1,7 @@
 Revision history for Mojolicious::Plugin::PlackMiddleware
 
-0.33 2014/06/20
+0.33 2014/08/06
+  - Updated Plack dependency to v1.0031
 
 0.32 2014/06/20
   - Updated partial test for mojo v5.08
