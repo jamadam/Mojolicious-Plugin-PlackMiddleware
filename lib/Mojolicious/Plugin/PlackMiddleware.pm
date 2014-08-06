@@ -83,6 +83,8 @@ use Scalar::Util 'weaken';
         my $env = shift;
         my $req = Mojo::Message::Request->new->parse($env);
         
+        $req->reverse_proxy($env->{MOJO_REVERSE_PROXY});
+        
         # Request body
         my $len = $env->{CONTENT_LENGTH};
         while (!$req->is_finished) {
@@ -108,12 +110,22 @@ use Scalar::Util 'weaken';
         my $body =
         Mojolicious::Plugin::PlackMiddleware::_PSGIInput->new($mojo_req->build_body);
         
-        my %headers = %{$mojo_req->headers->to_hash};
-        for my $key (keys %headers) {
-           my $value = $headers{$key};
-           delete $headers{$key};
-           $key =~ s{-}{_}g;
-           $headers{'HTTP_'. uc $key} = $value;
+        my %headers_org = %{$mojo_req->headers->to_hash};
+        my %headers;
+        for my $key (keys %headers_org) {
+            
+            my $value = $headers_org{$key};
+            $key =~ s{-}{_}g;
+            $key = uc $key;
+            if ($key !~ /^(?:CONTENT_LENGTH|CONTENT_TYPE)$/) {
+                $key = "HTTP_$key";
+            }
+            if (exists $headers{$key}) {
+                $headers{$key} .= ", $value";
+            } else {
+                $headers{$key} = $value;
+            }
+            $headers{$key} = $value;
         }
         
         return {
