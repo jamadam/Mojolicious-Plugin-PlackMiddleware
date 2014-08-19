@@ -26,8 +26,8 @@ plugin plack_middleware => [];
 get '/hello' => 'works';
 
 get '/primary' => sub {
-  my $self = shift;
-  $self->render(text => ++$self->session->{primary});
+  my $c = shift;
+  $c->render(text => ++$c->session->{primary});
 };
 
 my $t = Test::Mojo->new;

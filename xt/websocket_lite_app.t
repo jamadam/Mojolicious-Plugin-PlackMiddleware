@@ -14,13 +14,13 @@ use Test::Mojo;
 plugin plack_middleware => [];
 
 websocket '/echo' => sub {
-  my $self = shift;
-  $self->tx->max_websocket_size(262145)->with_compression;
-  $self->on(binary => sub { shift->send({binary => shift}) });
-  $self->on(
+  my $c = shift;
+  $c->tx->max_websocket_size(262145)->with_compression;
+  $c->on(binary => sub { shift->send({binary => shift}) });
+  $c->on(
     text => sub {
-      my ($self, $bytes) = @_;
-      $self->send("echo: $bytes");
+      my ($c, $bytes) = @_;
+      $c->send("echo: $bytes");
     }
   );
 };
@@ -28,19 +28,19 @@ websocket '/echo' => sub {
 get '/echo' => {text => 'plain echo!'};
 
 websocket '/no_compression' => sub {
-  my $self = shift;
-  $self->on(binary => sub { shift->send({binary => shift}) });
+  my $c = shift;
+  $c->on(binary => sub { shift->send({binary => shift}) });
 };
 
 websocket '/json' => sub {
-  my $self = shift;
-  $self->on(
+  my $c = shift;
+  $c->on(
     json => sub {
-      my ($self, $json) = @_;
-      return $self->send({json => $json}) unless ref $json;
-      return $self->send({json => [@$json, 4]}) if ref $json eq 'ARRAY';
+      my ($c, $json) = @_;
+      return $c->send({json => $json}) unless ref $json;
+      return $c->send({json => [@$json, 4]}) if ref $json eq 'ARRAY';
       $json->{test} += 1;
-      $self->send({json => $json});
+      $c->send({json => $json});
     }
   );
 };
@@ -48,24 +48,24 @@ websocket '/json' => sub {
 get '/plain' => {text => 'Nothing to see here!'};
 
 websocket '/push' => sub {
-  my $self = shift;
-  my $id = Mojo::IOLoop->recurring(0.1 => sub { $self->send('push') });
-  $self->on(finish => sub { Mojo::IOLoop->remove($id) });
+  my $c = shift;
+  my $id = Mojo::IOLoop->recurring(0.1 => sub { $c->send('push') });
+  $c->on(finish => sub { Mojo::IOLoop->remove($id) });
 };
 
 websocket '/unicode' => sub {
-  my $self = shift;
-  $self->on(
+  my $c = shift;
+  $c->on(
     message => sub {
-      my ($self, $msg) = @_;
-      $self->send("♥: $msg");
+      my ($c, $msg) = @_;
+      $c->send("♥: $msg");
     }
   );
 };
 
 websocket '/bytes' => sub {
-  my $self = shift;
-  $self->on(
+  my $c = shift;
+  $c->on(
     frame => sub {
       my ($ws, $frame) = @_;
       $ws->send({$frame->[4] == 2 ? 'binary' : 'text', $frame->[5]});
@@ -74,17 +74,17 @@ websocket '/bytes' => sub {
 };
 
 websocket '/once' => sub {
-  my $self = shift;
-  $self->on(
+  my $c = shift;
+  $c->on(
     message => sub {
-      my ($self, $msg) = @_;
-      $self->send("ONE: $msg");
+      my ($c, $msg) = @_;
+      $c->send("ONE: $msg");
     }
   );
-  $self->tx->once(
+  $c->tx->once(
     message => sub {
       my ($tx, $msg) = @_;
-      $self->send("TWO: $msg");
+      $c->send("TWO: $msg");
     }
   );
 };
@@ -92,13 +92,13 @@ websocket '/once' => sub {
 under '/nested';
 
 websocket sub {
-  my $self = shift;
-  my $echo = $self->cookie('echo') // '';
-  $self->cookie(echo => 'again');
-  $self->on(
+  my $c = shift;
+  my $echo = $c->cookie('echo') // '';
+  $c->cookie(echo => 'again');
+  $c->on(
     message => sub {
-      my ($self, $msg) = @_;
-      $self->send("nested echo: $msg$echo")->finish(1000);
+      my ($c, $msg) = @_;
+      $c->send("nested echo: $msg$echo")->finish(1000);
     }
   );
 };
@@ -133,6 +133,11 @@ $t->websocket_ok('/echo')->send_ok({binary => 'bytes!'})
   ->message_ok->message_is({binary => 'bytes!'})
   ->send_ok({binary => 'bytes!'})
   ->message_ok->message_isnt({text => 'bytes!'})->finish_ok;
+
+# Bytes in multiple frames
+$t->websocket_ok('/echo')->send_ok([0, 0, 0, 0, 2, 'a'])
+  ->send_ok([0, 0, 0, 0, 0, 'b'])->send_ok([1, 0, 0, 0, 0, 'c'])
+  ->message_ok->message_is({binary => 'abc'})->finish_ok;
 
 # Zero
 $t->websocket_ok('/echo')->send_ok(0)->message_ok->message_is('echo: 0')
@@ -211,9 +216,13 @@ $t->websocket_ok('/json')->send_ok({json => {test => 23, snowman => '☃'}})
   ->json_message_is('/2' => 3, 'right value')
   ->json_message_hasnt('/5', 'not five elements')
   ->send_ok({json => {'☃' => [1, 2, 3]}})
-  ->message_ok->json_message_is('/☃', [1, 2, 3])->send_ok({json => 'works'})
-  ->message_ok->json_message_is('works')->send_ok({json => undef})
-  ->message_ok->json_message_is(undef)->finish_ok;
+  ->message_ok->json_message_is('/☃', [1, 2, 3])
+  ->json_message_like('/☃/1' => qr/\d/)
+  ->json_message_unlike('/☃/1' => qr/[a-z]/)
+  ->json_message_like('/☃/2' => qr/3/, 'right value')
+  ->json_message_unlike('/☃/2' => qr/2/, 'different value')
+  ->send_ok({json => 'works'})->message_ok->json_message_is('works')
+  ->send_ok({json => undef})->message_ok->json_message_is(undef)->finish_ok;
 
 # Plain request
 $t->get_ok('/plain')->status_is(200)->content_is('Nothing to see here!');
