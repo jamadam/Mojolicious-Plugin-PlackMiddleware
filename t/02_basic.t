@@ -69,10 +69,10 @@ use Test::More tests => 56;
         use warnings;
         use base 'Mojolicious';
         
-        my $is_new_mojo = $self->VERSION > 5.76;
-        
         sub startup {
             my $self = shift;
+        
+            my $is_new_mojo = $self->VERSION > 5.76;
             
             $self->plugin('plack_middleware', [
                 'InvokeAppTwice'
