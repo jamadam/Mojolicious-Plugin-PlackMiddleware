@@ -20,7 +20,14 @@ my %params = (
     },
     META_MERGE => {
         resources => {
-            repository => '',
+            repository => {
+                type => 'git',
+                web  => 'https://github.com/jamadam/Mojolicious-Plugin-PlackMiddleware',
+                url  => 'https://github.com/jamadam/Mojolicious-Plugin-PlackMiddleware.git',
+            },
+            bugtracker => {
+                web  => 'https://github.com/jamadam/Mojolicious-Plugin-PlackMiddleware/issues',
+            },
         },
         no_index => {
             directory => ['t', 'xt'],
