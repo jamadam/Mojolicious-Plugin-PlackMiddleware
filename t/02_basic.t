@@ -69,6 +69,8 @@ use Test::More tests => 56;
         use warnings;
         use base 'Mojolicious';
         
+        my $is_new_mojo = $self->VERSION > 5.76;
+        
         sub startup {
             my $self = shift;
             
@@ -77,7 +79,7 @@ use Test::More tests => 56;
             ]);
             
             $self->routes->route('/index1')->to(cb => sub{
-                $_[0]->render_not_found;
+                return $is_new_mojo ? $_[0]->reply->not_found : $_[0]->render_not_found;
             });
             $self->routes->route('/index2')->to(cb => sub{
                 $_[0]->render(text => 'index2');
