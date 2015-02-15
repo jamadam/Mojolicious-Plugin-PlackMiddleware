@@ -53,20 +53,18 @@ use Scalar::Util 'weaken';
         $app->hook('around_dispatch' => sub {
             my ($next, $c) = @_;
             
-            if ($c->tx->req->error) {
-                $next->();
-            } else {
-                my $plack_env = mojo_req_to_psgi_env($c->req);
-                $plack_env->{'mojo.c'} = $c;
-                $plack_env->{'mojo.inside_app'} = $next;
-                $plack_env->{'psgi.errors'} =
-                    Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
-                        $c->app->log->debug(shift);
-                    });
-                
-                $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
-                $c->rendered if (! $plack_env->{'mojo.routed'});
-            }
+            return $next->() if ($c->tx->req->error);
+            
+            my $plack_env = mojo_req_to_psgi_env($c->req);
+            $plack_env->{'mojo.c'} = $c;
+            $plack_env->{'mojo.inside_app'} = $next;
+            $plack_env->{'psgi.errors'} =
+                Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
+                    $c->app->log->debug(shift);
+                });
+            
+            $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
+            $c->rendered if (! $plack_env->{'mojo.routed'});
         });
     }
     
@@ -117,14 +115,7 @@ use Scalar::Util 'weaken';
             my $value = $headers_org{$key};
             $key =~ s{-}{_}g;
             $key = uc $key;
-            if ($key !~ /^(?:CONTENT_LENGTH|CONTENT_TYPE)$/) {
-                $key = "HTTP_$key";
-            }
-            if (exists $headers{$key}) {
-                $headers{$key} .= ", $value";
-            } else {
-                $headers{$key} = $value;
-            }
+            $key = "HTTP_$key" if ($key !~ /^(?:CONTENT_LENGTH|CONTENT_TYPE)$/);
             $headers{$key} = $value;
         }
         
@@ -179,9 +170,7 @@ use Scalar::Util 'weaken';
         my $status = $mojo_res->code;
         my $headers = $mojo_res->content->headers;
         my @headers;
-        for my $name (@{$headers->names}) {
-            push @headers, $name => $headers->header($name);
-        }
+        push @headers, $_ => $headers->header($_) for (@{$headers->names});
         my @body;
         my $offset = 0;
         
