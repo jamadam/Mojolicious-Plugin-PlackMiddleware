@@ -77,7 +77,7 @@ use Test::More tests => 56;
             ]);
             
             $self->routes->route('/index1')->to(cb => sub{
-                $_[0]->render_not_found;
+                $_[0]->reply->not_found;
             });
             $self->routes->route('/index2')->to(cb => sub{
                 $_[0]->render(text => 'index2');
