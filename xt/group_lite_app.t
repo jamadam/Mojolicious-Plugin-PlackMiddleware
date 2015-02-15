@@ -10,6 +10,8 @@ use Test::Mojo;
 
 app->secrets(['test1']);
 
+plugin plack_middleware => [];
+
 get '/multi' => sub {
   my $c = shift;
   $c->cookie(unsigned1 => 'one');

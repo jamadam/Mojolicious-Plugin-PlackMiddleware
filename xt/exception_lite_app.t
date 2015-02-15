@@ -18,6 +18,8 @@ app->log->level($ENV{MOJO_LOG_LEVEL} = 'debug');
 my $log = '';
 app->log->on(message => sub { shift; $log .= join ':', @_ });
 
+plugin plack_middleware => [];
+
 helper dead_helper => sub { die "dead helper!\n" };
 
 # Custom rendering for missing "txt" template

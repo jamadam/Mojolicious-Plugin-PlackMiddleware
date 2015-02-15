@@ -16,6 +16,8 @@ use Test::Mojo;
 package TestApp;
 use Mojolicious::Lite;
 
+plugin plack_middleware => [];
+
 get '/hello' => sub {
   my $c       = shift;
   my $name    = $c->stash('name');

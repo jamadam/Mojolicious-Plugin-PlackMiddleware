@@ -16,6 +16,8 @@ package main;
 
 app->controller_class('MyTestApp::Controller');
 
+plugin plack_middleware => [];
+
 get '/shortpoll' => sub {
   my $c = shift;
   $c->res->headers->connection('close');

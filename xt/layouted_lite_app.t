@@ -22,6 +22,8 @@ hook after_render => sub {
   $$output = reverse $$output . $format;
 };
 
+plugin plack_middleware => [];
+
 # Default layout for whole application
 app->defaults(layout => 'default');
 

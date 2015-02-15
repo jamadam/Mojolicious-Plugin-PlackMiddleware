@@ -21,6 +21,8 @@ app->log->level('fatal');
 # Secure sessions
 app->sessions->secure(1);
 
+plugin plack_middleware => [];
+
 get '/login' => sub {
   my $c = shift;
   my $name = $c->param('name') || 'anonymous';

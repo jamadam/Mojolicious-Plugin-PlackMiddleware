@@ -20,6 +20,8 @@ app->routes->add_condition(
   }
 );
 
+plugin plack_middleware => [];
+
 get '/' => 'index';
 
 get '/echo' => sub {

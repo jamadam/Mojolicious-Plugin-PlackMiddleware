@@ -7,6 +7,8 @@ use Mojolicious::Lite;
 use Scalar::Util 'weaken';
 use Test::Mojo;
 
+plugin plack_middleware => [];
+
 # Stream multipart uploads into cache
 my %cache;
 hook after_build_tx => sub {

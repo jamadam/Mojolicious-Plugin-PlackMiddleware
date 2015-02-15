@@ -9,6 +9,8 @@ use Mojo::Content::Single;
 use Mojolicious::Lite;
 use Test::Mojo;
 
+plugin plack_middleware => [];
+
 post '/upload' => sub {
   my $c       = shift;
   my $file    = $c->param('file');

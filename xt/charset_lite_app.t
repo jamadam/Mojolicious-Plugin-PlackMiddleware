@@ -22,6 +22,8 @@ app->renderer->add_handler(
   }
 );
 
+plugin plack_middleware => [];
+
 get '/' => 'index';
 
 post '/' => sub {

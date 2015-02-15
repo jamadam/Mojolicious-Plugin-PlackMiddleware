@@ -5,6 +5,7 @@ use MojoliciousTest::Foo;
 
 sub startup {
   my $self = shift;
+  $self->plugin(plack_middleware => []);
 
   if ($self->mode eq 'development') {
 

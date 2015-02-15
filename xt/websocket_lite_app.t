@@ -8,6 +8,8 @@ use Mojo::JSON 'encode_json';
 use Mojolicious::Lite;
 use Test::Mojo;
 
+plugin plack_middleware => [];
+
 websocket '/echo' => sub {
   my $c = shift;
   $c->tx->max_websocket_size(65538)->with_compression;

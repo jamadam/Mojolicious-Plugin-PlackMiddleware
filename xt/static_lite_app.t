@@ -8,6 +8,8 @@ use Mojo::Date;
 use Mojolicious::Lite;
 use Test::Mojo;
 
+plugin plack_middleware => [];
+
 get '/hello3.txt' => sub { shift->reply->static('hello2.txt') };
 
 post '/hello4.txt' => sub {

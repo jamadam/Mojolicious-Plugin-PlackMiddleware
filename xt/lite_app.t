@@ -49,6 +49,8 @@ app->renderer->add_handler(dead => sub { die 'renderer works!' });
 # UTF-8 text
 app->types->type(txt => 'text/plain;charset=UTF-8');
 
+plugin plack_middleware => [];
+
 # Rewrite when rendering to string
 hook before_render => sub {
   my ($c, $args) = @_;

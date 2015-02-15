@@ -27,6 +27,8 @@ hook before_routes => sub {
   $c->session->{secondary} += 10;
 };
 
+plugin plack_middleware => [];
+
 get '/hello' => 'works';
 
 get '/primary' => sub {

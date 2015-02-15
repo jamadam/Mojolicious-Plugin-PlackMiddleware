@@ -6,6 +6,8 @@ use Test::More;
 use Mojolicious::Lite;
 use Test::Mojo;
 
+plugin plack_middleware => [];
+
 options 'tags';
 
 patch 'more_tags';

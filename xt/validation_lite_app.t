@@ -9,6 +9,8 @@ use Test::Mojo;
 # Custom check
 app->validator->add_check(two => sub { length $_[2] == 2 ? undef : 'ohoh' });
 
+plugin plack_middleware => [];
+
 any '/' => sub {
   my $c = shift;
 

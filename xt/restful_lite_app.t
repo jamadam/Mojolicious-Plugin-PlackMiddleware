@@ -6,6 +6,8 @@ use Test::More;
 use Mojolicious::Lite;
 use Test::Mojo;
 
+plugin plack_middleware => [];
+
 any [qw(POST PUT)] => '/json/echo' => sub {
   my $c = shift;
   $c->respond_to(json => {json => $c->req->json});

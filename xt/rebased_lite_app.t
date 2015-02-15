@@ -24,6 +24,8 @@ app->hook(
   }
 );
 
+plugin plack_middleware => [];
+
 get '/' => 'root';
 
 get '/foo';

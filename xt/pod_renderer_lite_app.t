@@ -13,6 +13,8 @@ ok app->routes->find('perldoc'), 'route found';
 # Default layout
 app->defaults(layout => 'gray');
 
+plugin plack_middleware => [];
+
 get '/' => sub {
   my $c = shift;
   $c->render('simple', handler => 'pod');

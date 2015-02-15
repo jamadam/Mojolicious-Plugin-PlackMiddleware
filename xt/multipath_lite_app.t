@@ -10,6 +10,8 @@ use Test::Mojo;
 unshift @{app->renderer->paths}, app->home->rel_dir('templates2');
 unshift @{app->static->paths},   app->home->rel_dir('public2');
 
+plugin plack_middleware => [];
+
 get '/twenty_three' => '23';
 
 get '/fourty_two' => '42';

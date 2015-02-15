@@ -12,6 +12,8 @@ use File::Spec::Functions 'catfile';
 use Mojolicious::Lite;
 use Test::Mojo;
 
+plugin plack_middleware => [];
+
 # Default
 app->config(it => 'works');
 is_deeply app->config, {it => 'works'}, 'right value';

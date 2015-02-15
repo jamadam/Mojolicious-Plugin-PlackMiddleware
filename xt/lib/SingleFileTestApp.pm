@@ -3,6 +3,7 @@ use Mojo::Base 'Mojolicious';
 
 sub startup {
   my $self = shift;
+  $self->plugin(plack_middleware => []);
 
   # Only log errors to STDERR
   $self->log->level('fatal');

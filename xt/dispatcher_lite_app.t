@@ -11,6 +11,8 @@ use Mojo::Message::Response;
 use Mojolicious::Lite;
 use Test::Mojo;
 
+plugin plack_middleware => [];
+
 # Internal redirect
 hook around_dispatch => sub {
   my ($next, $c) = @_;

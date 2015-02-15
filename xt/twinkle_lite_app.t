@@ -7,6 +7,8 @@ use Mojolicious::Lite;
 use Mojo::Util;
 use Test::Mojo;
 
+plugin plack_middleware => [];
+
 # Custom format
 app->renderer->default_format('foo');
 
