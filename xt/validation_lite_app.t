@@ -1,9 +1,6 @@
 use Mojo::Base -strict;
 
-BEGIN {
-  $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
-}
+BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 
 use Test::More;
 use Mojolicious::Lite;
@@ -11,8 +8,6 @@ use Test::Mojo;
 
 # Custom check
 app->validator->add_check(two => sub { length $_[2] == 2 ? undef : 'ohoh' });
-
-plugin plack_middleware => [];
 
 any '/' => sub {
   my $c = shift;
@@ -38,9 +33,12 @@ my $t = Test::Mojo->new;
 # Required and optional values
 my $validation = $t->app->validation->input({foo => 'bar', baz => 'yada'});
 is_deeply [$validation->error], [], 'no names';
+is $validation->param('foo'), undef, 'no value';
+is_deeply $validation->every_param('foo'), [], 'no values';
 ok $validation->required('foo')->is_valid, 'valid';
 is_deeply $validation->output, {foo => 'bar'}, 'right result';
 is $validation->param('foo'), 'bar', 'right value';
+is_deeply $validation->every_param('foo'), ['bar'], 'right values';
 is_deeply [$validation->param], ['foo'], 'right names';
 ok !$validation->has_error, 'no error';
 ok $validation->optional('baz')->is_valid, 'valid';
@@ -79,6 +77,8 @@ is_deeply [$validation->error], [qw(baz yada)], 'right names';
 $validation = $t->app->validation->input(
   {foo => [qw(bar whatever)], baz => [qw(yada ohoh)]});
 ok $validation->required('foo')->in(qw(23 bar whatever))->is_valid, 'valid';
+is_deeply $validation->every_param('foo'), [qw(bar whatever)], 'right results';
+is $validation->param('foo'), 'whatever', 'right result';
 is_deeply $validation->output, {foo => [qw(bar whatever)]}, 'right result';
 ok !$validation->has_error, 'no error';
 ok !$validation->required('baz')->in(qw(yada whatever))->is_valid, 'not valid';
@@ -128,9 +128,9 @@ is_deeply $validation->error('foo'), ['required'], 'right error';
 # "0"
 $validation = $t->app->validation->input({0 => 0});
 ok $validation->has_data, 'has data';
-ok $validation->required('0')->size(1, 1)->is_valid, 'valid';
+ok $validation->required(0)->size(1, 1)->is_valid, 'valid';
 is_deeply $validation->output, {0 => 0}, 'right result';
-is $validation->param('0'), 0, 'right value';
+is $validation->param(0), 0, 'right value';
 
 # Custom error
 $validation = $t->app->validation->input({foo => 'bar'});

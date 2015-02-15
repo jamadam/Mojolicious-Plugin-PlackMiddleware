@@ -2,7 +2,6 @@ use Mojo::Base -strict;
 
 BEGIN {
   $ENV{MOJO_MODE}    = 'testing';
-  $ENV{MOJO_NO_IPV6} = 1;
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
@@ -16,8 +15,6 @@ use Test::Mojo;
 
 package TestApp;
 use Mojolicious::Lite;
-
-plugin plack_middleware => [];
 
 get '/hello' => sub {
   my $c       = shift;
@@ -180,7 +177,7 @@ works ♥!Insecure!Insecure!
 too!works!!!Mojolicious::Plugin::Config::Sandbox
 <a href="/x/1/">Test</a>
 <form action="/x/1/%E2%98%83">
-  <input type="submit" value="☃" />
+  <input type="submit" value="☃">
 </form>
 EOF
 
@@ -196,7 +193,7 @@ $t->get_ok('/x/1/stream')->status_is(200)->content_is('hello!');
 
 # URL from myapp.pl
 $t->get_ok('/x/1/url/☃')->status_is(200)
-  ->content_is('/x/1/url/%E2%98%83 -> /x/1/%E2%98%83/stream!');
+  ->content_is('/x/1/url/%E2%98%83.json -> /x/1/%E2%98%83/stream!');
 
 # Route to template from myapp.pl
 $t->get_ok('/x/1/template/menubar')->status_is(200)
@@ -205,7 +202,7 @@ $t->get_ok('/x/1/template/menubar')->status_is(200)
 # Missing template from myapp.pl
 $t->get_ok('/x/1/template/does_not_exist')->status_is(404);
 
-# Template from myapp.pl with unicode prefix
+# Template from myapp.pl with Unicode prefix
 $t->get_ok('/x/♥/')->status_is(200)->content_is(<<'EOF');
 myapp
 works ♥!Insecure!Insecure!
@@ -213,29 +210,30 @@ works ♥!Insecure!Insecure!
 too!works!!!Mojolicious::Plugin::Config::Sandbox
 <a href="/x/%E2%99%A5/">Test</a>
 <form action="/x/%E2%99%A5/%E2%98%83">
-  <input type="submit" value="☃" />
+  <input type="submit" value="☃">
 </form>
 EOF
 
-# Static file from myapp.pl with unicode prefix
+# Static file from myapp.pl with Unicode prefix
 $t->get_ok('/x/♥/index.html')->status_is(200)
   ->content_is("External static file!\n");
 
-# Echo from myapp.pl with unicode prefix
+# Echo from myapp.pl with Unicode prefix
 $t->get_ok('/x/♥/echo')->status_is(200)->content_is('echo: works 2!');
 
-# Stream from myapp.pl with unicode prefix
+# Stream from myapp.pl with Unicode prefix
 $t->get_ok('/x/♥/stream')->status_is(200)->content_is('hello!');
 
-# URL from myapp.pl with unicode prefix
+# URL from myapp.pl with Unicode prefix
 $t->get_ok('/x/♥/url/☃')->status_is(200)
-  ->content_is('/x/%E2%99%A5/url/%E2%98%83 -> /x/%E2%99%A5/%E2%98%83/stream!');
+  ->content_is(
+  '/x/%E2%99%A5/url/%E2%98%83.json -> /x/%E2%99%A5/%E2%98%83/stream!');
 
-# Route to template from myapp.pl with unicode prefix
+# Route to template from myapp.pl with Unicode prefix
 $t->get_ok('/x/♥/template/menubar')->status_is(200)
   ->content_is("myapp\nworks ♥!Insecure!Insecure!\n");
 
-# Missing template from myapp.pl with unicode prefix
+# Missing template from myapp.pl with Unicode prefix
 $t->get_ok('/x/♥/template/does_not_exist')->status_is(404);
 
 # A little bit of everything from myapp2.pl
@@ -255,17 +253,17 @@ $t->get_ok('/y/1/cached?cache=fail')->status_is(200)->content_is('foo');
 # 404 from myapp2.pl
 $t->get_ok('/y/1/2')->status_is(404);
 
-# myapp2.pl with unicode prefix
+# myapp2.pl with Unicode prefix
 $t->get_ok('/y/♥')->status_is(200)
   ->content_is("myapp2\nworks 3!\nInsecure too!");
 
-# Caching helper from myapp2.pl with unicode prefix
+# Caching helper from myapp2.pl with Unicode prefix
 $t->get_ok('/y/♥/cached?cache=bar')->status_is(200)->content_is('bar');
 
-# Caching helper with cached value from myapp2.pl with unicode prefix
+# Caching helper with cached value from myapp2.pl with Unicode prefix
 $t->get_ok('/y/♥/cached?cache=fail')->status_is(200)->content_is('bar');
 
-# 404 from myapp2.pl with unicode prefix
+# 404 from myapp2.pl with Unicode prefix
 $t->get_ok('/y/♥/2')->status_is(404);
 
 # main
@@ -280,7 +278,7 @@ works ♥!Insecure!Insecure!
 too!works!!!Mojolicious::Plugin::Config::Sandbox
 <a href="/">Test</a>
 <form action="/%E2%98%83">
-  <input type="submit" value="☃" />
+  <input type="submit" value="☃">
 </form>
 EOF
 
@@ -297,7 +295,7 @@ works ♥!Insecure!Insecure!
 too!works!!!Mojolicious::Plugin::Config::Sandbox
 <a href="/">Test</a>
 <form action="/%E2%98%83">
-  <input type="submit" value="☃" />
+  <input type="submit" value="☃">
 </form>
 EOF
 
@@ -314,7 +312,7 @@ works ♥!Insecure!Insecure!
 too!works!!!Mojolicious::Plugin::Config::Sandbox
 <a href="/">Test</a>
 <form action="/%E2%98%83">
-  <input type="submit" value="☃" />
+  <input type="submit" value="☃">
 </form>
 EOF
 
@@ -330,7 +328,7 @@ $t->get_ok('/host' => {Host => 'www.example.com'})->status_is(200)
 $t->get_ok('/host' => {Host => 'foo.bar.example.com'})->status_is(200)
   ->header_is('X-Message' => 'it works!')->content_is('foo.bar.example.com');
 
-# Template from myapp.pl with wildcard domain and unicode prefix
+# Template from myapp.pl with wildcard domain and Unicode prefix
 $t->get_ok('/♥/123/' => {Host => 'foo-bar.de'})->status_is(200)
   ->content_is(<<'EOF');
 myapp
@@ -339,31 +337,31 @@ works ♥!Insecure!Insecure!
 too!works!!!Mojolicious::Plugin::Config::Sandbox
 <a href="/%E2%99%A5/123/">Test</a>
 <form action="/%E2%99%A5/123/%E2%98%83">
-  <input type="submit" value="☃" />
+  <input type="submit" value="☃">
 </form>
 EOF
 
-# Host from myapp.pl with wildcard domain and unicode prefix
+# Host from myapp.pl with wildcard domain and Unicode prefix
 $t->get_ok('/♥/123/host' => {Host => 'foo-bar.de'})->status_is(200)
   ->header_is('X-Message' => 'it works!')->content_is('foo-bar.de');
 
-# Echo from myapp.pl with wildcard domain and unicode prefix
+# Echo from myapp.pl with wildcard domain and Unicode prefix
 $t->get_ok('/♥/123/echo' => {Host => 'foo-bar.de'})->status_is(200)
   ->content_is('echo: works 3!');
 
-# Host from myapp.pl with wildcard domain and unicode prefix again
+# Host from myapp.pl with wildcard domain and Unicode prefix again
 $t->get_ok('/♥/123/host' => {Host => 'www.foo-bar.de'})->status_is(200)
   ->header_is('X-Message' => 'it works!')->content_is('www.foo-bar.de');
 
-# Host from myapp.pl with wildcard domain and unicode prefix again
+# Host from myapp.pl with wildcard domain and Unicode prefix again
 $t->get_ok('/♥/123/echo' => {Host => 'www.foo-bar.de'})->status_is(200)
   ->content_is('echo: works 3!');
 
-# Text from myapp.pl with wildcard domain and unicode prefix
+# Text from myapp.pl with wildcard domain and Unicode prefix
 $t->get_ok('/♥/123/one' => {Host => 'www.foo-bar.de'})->status_is(200)
   ->content_is('One');
 
-# Another text from myapp.pl with wildcard domain and unicode prefix
+# Another text from myapp.pl with wildcard domain and Unicode prefix
 $t->get_ok('/♥/123/one/two' => {Host => 'www.foo-bar.de'})->status_is(200)
   ->content_is('Two');
 
@@ -372,6 +370,13 @@ $t->get_ok('/' => {Host => 'mojoliciousxorg'})->status_is(404);
 
 # Another invalid domain
 $t->get_ok('/' => {Host => 'www.kraihxcom'})->status_is(404);
+
+# Embedded WebSocket
+$t->websocket_ok('/x/♥/url_for')->send_ok('ws_test')
+  ->message_ok->message_like(qr!^ws://127\.0\.0\.1:\d+/x/%E2%99%A5/url_for$!)
+  ->send_ok('index')
+  ->message_ok->message_like(qr!^http://127\.0\.0\.1:\d+/x/%E2%99%A5$!)
+  ->finish_ok;
 
 done_testing();
 

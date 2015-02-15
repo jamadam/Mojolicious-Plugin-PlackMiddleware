@@ -2,7 +2,6 @@ use Mojo::Base -strict;
 
 BEGIN {
   $ENV{MOJO_MODE}    = 'development';
-  $ENV{MOJO_NO_IPV6} = 1;
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
@@ -13,21 +12,23 @@ use File::Spec::Functions 'catfile';
 use Mojolicious::Lite;
 use Test::Mojo;
 
-plugin plack_middleware => [];
-
 # Default
 app->config(it => 'works');
 is_deeply app->config, {it => 'works'}, 'right value';
+
+# Invalid config file
+my $path = abs_path catfile(dirname(__FILE__), 'public', 'hello.txt');
+eval { plugin JSONConfig => {file => $path}; };
+like $@, qr/Malformed JSON/, 'right error';
 
 # Load plugins
 my $config
   = plugin j_s_o_n_config => {default => {foo => 'baz', hello => 'there'}};
 my $log = '';
 my $cb = app->log->on(message => sub { $log .= pop });
-my $path
-  = abs_path(catfile(dirname(__FILE__), 'json_config_lite_app_abs.json'));
+$path = abs_path catfile(dirname(__FILE__), 'json_config_lite_app_abs.json');
 plugin JSONConfig => {file => $path};
-like $log, qr/Reading configuration file "\Q$path\E"\./, 'right message';
+like $log, qr/Reading configuration file "\Q$path\E"/, 'right message';
 app->log->unsubscribe(message => $cb);
 is $config->{foo},          'bar',            'right value';
 is $config->{hello},        'there',          'right value';

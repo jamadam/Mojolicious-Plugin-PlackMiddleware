@@ -3,7 +3,6 @@ use Mojo::Base 'Mojolicious';
 
 sub startup {
   my $self = shift;
-  $self->plugin(plack_middleware => []);
 
   # Only log errors to STDERR
   $self->log->level('fatal');
@@ -16,9 +15,6 @@ sub startup {
   # DATA classes
   push @{$self->renderer->classes}, 'SingleFileTestApp::Foo';
   push @{$self->static->classes},   'SingleFileTestApp::Foo';
-
-  # Allow redispatching controller
-  push @{$self->routes->base_classes}, 'Mojo::Base';
 
   # Helper route
   $self->routes->route('/helper')->to(
@@ -33,7 +29,7 @@ sub startup {
 }
 
 package SingleFileTestApp::Redispatch;
-use Mojo::Base -base;
+use Mojo::Base 'Mojo';
 
 sub handler {
   my ($self, $c) = @_;
@@ -64,7 +60,7 @@ sub data_template { shift->render('index') }
 
 sub data_template2 { shift->stash(template => 'too') }
 
-sub data_static { shift->render_static('singlefiletestapp/foo.txt') }
+sub data_static { shift->reply->static('singlefiletestapp/foo.txt') }
 
 sub index {
   shift->stash(template => 'WithGreenLayout', msg => 'works great!');

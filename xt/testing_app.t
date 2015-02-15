@@ -2,7 +2,6 @@ use Mojo::Base -strict;
 
 BEGIN {
   $ENV{MOJO_MODE}    = 'testing';
-  $ENV{MOJO_NO_IPV6} = 1;
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
@@ -43,6 +42,12 @@ $t->get_ok('/foo/baz')->status_is(404)
 # Try to access a file which is not under the web root via path
 # traversal in testing mode
 $t->get_ok('/../../mojolicious/secret.txt')->status_is(404)
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->content_like(qr/Testing not found/);
+
+# Try to access a file which is not under the web root via path
+# traversal in testing mode (triple dot)
+$t->get_ok('/.../mojolicious/secret.txt')->status_is(404)
   ->header_is(Server => 'Mojolicious (Perl)')
   ->content_like(qr/Testing not found/);
 

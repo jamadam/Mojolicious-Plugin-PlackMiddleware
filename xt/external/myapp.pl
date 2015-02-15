@@ -20,8 +20,6 @@ app->routes->add_condition(
   }
 );
 
-plugin plack_middleware => [];
-
 get '/' => 'index';
 
 get '/echo' => sub {
@@ -39,7 +37,7 @@ get '/stream' => sub {
 
 get '/url/☃' => sub {
   my $c     = shift;
-  my $route = $c->url_for;
+  my $route = $c->url_for({format => 'json'});
   my $rel   = $c->url_for('/☃/stream');
   $c->render(text => "$route -> $rel!");
 };
@@ -54,6 +52,16 @@ get '/one' => sub { shift->render(text => 'One') };
 get '/one/two' => {text => 'Two'};
 
 get '/template/:template';
+
+websocket '/url_for' => sub {
+  my $c = shift;
+  $c->on(
+    message => sub {
+      my ($c, $msg) = @_;
+      $c->send($c->url_for($msg)->to_abs);
+    }
+  );
+} => 'ws_test';
 
 app->start;
 __DATA__

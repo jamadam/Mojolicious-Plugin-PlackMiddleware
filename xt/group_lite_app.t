@@ -1,9 +1,6 @@
 use Mojo::Base -strict;
 
-BEGIN {
-  $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
-}
+BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 
 use Test::More;
 use Mojo::ByteStream 'b';
@@ -12,8 +9,6 @@ use Mojolicious::Lite;
 use Test::Mojo;
 
 app->secrets(['test1']);
-
-plugin plack_middleware => [];
 
 get '/multi' => sub {
   my $c = shift;
@@ -208,7 +203,7 @@ $t->get_ok('/multi')->status_is(200)
 # Multiple cookies with same name (again)
 $t->get_ok('/multi')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
-  ->content_is("one\nthree\none\ntwo\nfour\nsix\nfour\nfive\n");
+  ->content_is("two\nthree\none\ntwo\nfive\nsix\nfour\nfive\n");
 
 # Missing action behind bridge
 $t->get_ok('/missing')->status_is(404)->content_is("Oops!\n");
@@ -218,11 +213,11 @@ my $log = '';
 my $cb = $t->app->log->on(message => sub { $log .= pop });
 $t->get_ok('/suspended?ok=1')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is('suspended!');
-like $log, qr!GET "/suspended"\.!,      'right message';
-like $log, qr/Routing to a callback\./, 'right message';
-like $log, qr/Nothing has been rendered, expecting delayed response\./,
+like $log, qr!GET "/suspended"!,      'right message';
+like $log, qr/Routing to a callback/, 'right message';
+like $log, qr/Nothing has been rendered, expecting delayed response/,
   'right message';
-like $log, qr/Rendering inline template "f75d6f5993c626fa8049366389f77928"\./,
+like $log, qr/Rendering inline template "f75d6f5993c626fa8049366389f77928"/,
   'right message';
 $t->app->log->unsubscribe(message => $cb);
 
@@ -276,9 +271,8 @@ $cb = $t->app->log->on(message => sub { $log .= pop });
 $t->get_ok('/bridge2stash')->status_is(200)
   ->content_is(
   "stash too!cookie!!signed_cookie!!bad_cookie--12345678!session!flash!\n");
-like $log, qr/Cookie "foo" not signed\./, 'right message';
-like $log, qr/Bad signed cookie "bad", possible hacking attempt\./,
-  'right message';
+like $log, qr/Cookie "foo" is not signed/,       'right message';
+like $log, qr/Cookie "bad" has a bad signature/, 'right message';
 ok $t->tx->res->cookie('mojolicious')->httponly,
   'session cookie has HttpOnly flag';
 $t->app->log->unsubscribe(message => $cb);
@@ -290,15 +284,15 @@ my $hmac    = $session->clone->hmac_sha1_sum($t->app->secrets->[0]);
 $t->get_ok('/bridge2stash' => {Cookie => "mojolicious=$session--$hmac"})
   ->status_is(200)->content_is("stash too!!!!!!!!\n");
 
-# Without cookie jar
-$t->ua->cookie_jar(0);
+# Not extracting cookies
+$t->reset_session->ua->cookie_jar->extracting(0);
 $t->get_ok('/bridge2stash' => {'X-Flash' => 1})->status_is(200)
   ->content_is("stash too!!!!!!!!\n");
 
-# Again without cookie jar
+# Still not extracting cookies
 $t->get_ok('/bridge2stash' => {'X-Flash' => 1})->status_is(200)
   ->content_is("stash too!!!!!!!!\n");
-$t->reset_session->ua->cookie_jar(Mojo::UserAgent::CookieJar->new);
+$t->ua->cookie_jar->extracting(1);
 
 # Fresh start without cookies, session or flash
 $t->get_ok('/bridge2stash' => {'X-Flash' => 1})->status_is(200)
@@ -320,7 +314,7 @@ $t->app->secrets(['test2', 'test1']);
 $t->get_ok('/bridge2stash' => {'X-Flash2' => 1})->status_is(200)
   ->content_is(
   "stash too!cookie!!signed_cookie!!bad_cookie--12345678!session!!\n");
-ok $t->tx->res->cookie('mojolicious')->expires->epoch < time,
+ok $t->tx->res->cookie('mojolicious')->expires < time,
   'session cookie expires';
 
 # With cookies and session cleared (rotating secrets)
@@ -476,15 +470,15 @@ Oops!
 % my ($one, $three) = $c->cookie([qw(unsigned1 unsigned2)]);
 %= $one // ''
 %= $three // '';
-% my @unsigned1 = $c->cookie('unsigned1');
-%= $unsigned1[0] // ''
-%= $unsigned1[1] // ''
+% my $unsigned1 = $c->every_cookie('unsigned1');
+%= $unsigned1->[0] // ''
+%= $unsigned1->[1] // ''
 % my ($four, $six) = $c->signed_cookie([qw(signed1 signed2)]);
 %= $four // ''
 %= $six // '';
-% my @signed1 = $c->signed_cookie('signed1');
-%= $signed1[0] // ''
-%= $signed1[1] // ''
+% my $signed1 = $c->every_signed_cookie('signed1');
+%= $signed1->[0] // ''
+%= $signed1->[1] // ''
 
 @@ param_auth.html.epl
 Bender!

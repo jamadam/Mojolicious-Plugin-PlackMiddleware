@@ -1,9 +1,6 @@
 use Mojo::Base -strict;
 
-BEGIN {
-  $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
-}
+BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 
 use Test::More;
 use Mojolicious::Lite;
@@ -12,8 +9,6 @@ use Test::Mojo;
 # More paths with higher precedence
 unshift @{app->renderer->paths}, app->home->rel_dir('templates2');
 unshift @{app->static->paths},   app->home->rel_dir('public2');
-
-plugin plack_middleware => [];
 
 get '/twenty_three' => '23';
 

@@ -1,9 +1,6 @@
 use Mojo::Base -strict;
 
-BEGIN {
-  $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
-}
+BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 
 use Test::More;
 use Mojo::IOLoop;
@@ -18,8 +15,6 @@ sub DESTROY { shift->stash->{destroyed} = 1 }
 package main;
 
 app->controller_class('MyTestApp::Controller');
-
-plugin plack_middleware => [];
 
 get '/shortpoll' => sub {
   my $c = shift;
@@ -177,7 +172,7 @@ get '/longpoll/static/delayed' => sub {
   $c->on(finish => sub { shift->stash->{finished}++ });
   $c->cookie(bar => 'baz');
   $c->session(foo => 'bar');
-  Mojo::IOLoop->timer(0.25 => sub { $c->render_static('hello.txt') });
+  Mojo::IOLoop->timer(0.25 => sub { $c->reply->static('hello.txt') });
 };
 
 get '/longpoll/dynamic/delayed' => sub {
@@ -219,9 +214,8 @@ get '/too_long' => sub {
   my $c = shift;
   $c->res->code(200);
   $c->res->headers->content_type('text/plain');
-  $c->res->headers->content_length(12);
-  $c->write('how');
-  Mojo::IOLoop->timer(5 => sub { $c->write('dy plain!') });
+  $c->res->headers->content_length(17);
+  $c->write('Waiting forever!');
 };
 
 my $steps;
@@ -254,7 +248,7 @@ ok !$t->tx->kept_alive, 'connection was not kept alive';
 ok !$t->tx->keep_alive, 'connection will not be kept alive';
 is $stash->{finished}, 1, 'finish event has been emitted once';
 ok $stash->{destroyed}, 'controller has been destroyed';
-unlike $log, qr/Nothing has been rendered, expecting delayed response\./,
+unlike $log, qr/Nothing has been rendered, expecting delayed response/,
   'right message';
 $t->app->log->unsubscribe(message => $cb);
 
@@ -399,7 +393,7 @@ $t->get_ok('/longpoll/static/delayed')->status_is(200)
   ->content_is("Hello Mojo from a static file!\n");
 is $stash->{finished}, 1, 'finish event has been emitted once';
 ok $stash->{destroyed}, 'controller has been destroyed';
-like $log, qr/Nothing has been rendered, expecting delayed response\./,
+like $log, qr/Nothing has been rendered, expecting delayed response/,
   'right message';
 $t->app->log->unsubscribe(message => $cb);
 
@@ -429,33 +423,14 @@ ok !$stash->{writing}, 'finish event timing is right';
 ok $stash->{destroyed}, 'controller has been destroyed';
 
 # Request timeout
-$tx = $t->ua->request_timeout(0.5)->build_tx(GET => '/too_long');
-$buffer = '';
-$tx->res->content->unsubscribe('read')->on(
-  read => sub {
-    my ($content, $chunk) = @_;
-    $buffer .= $chunk;
-  }
-);
-$t->ua->start($tx);
-is $tx->res->code, 200, 'right status';
+$tx = $t->ua->request_timeout(0.5)->get('/too_long');
 is $tx->error->{message}, 'Request timeout', 'right error';
-is $buffer, 'how', 'right content';
 $t->ua->request_timeout(0);
 
 # Inactivity timeout
-$tx = $t->ua->inactivity_timeout(0.5)->build_tx(GET => '/too_long');
-$buffer = '';
-$tx->res->content->unsubscribe('read')->on(
-  read => sub {
-    my ($content, $chunk) = @_;
-    $buffer .= $chunk;
-  }
-);
-$t->ua->start($tx);
-is $tx->res->code, 200, 'right status';
+$tx = $t->ua->inactivity_timeout(0.5)->get('/too_long');
 is $tx->error->{message}, 'Inactivity timeout', 'right error';
-is $buffer, 'how', 'right content';
+$t->ua->inactivity_timeout(20);
 
 # Transaction is available after rendering early in steps
 $t->get_ok('/steps')->status_is(200)->content_is('second');

@@ -1,16 +1,13 @@
 use Mojo::Base -strict;
 
-BEGIN {
-  $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
-}
+BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 
 use Test::More;
 use Mojo::IOLoop::Server;
 
 plan skip_all => 'set TEST_TLS to enable this test (developer only!)'
   unless $ENV{TEST_TLS};
-plan skip_all => 'IO::Socket::SSL 1.84 required for this test!'
+plan skip_all => 'IO::Socket::SSL 1.94 required for this test!'
   unless Mojo::IOLoop::Server::TLS;
 
 use Mojo::IOLoop;
@@ -23,8 +20,6 @@ app->log->level('fatal');
 
 # Secure sessions
 app->sessions->secure(1);
-
-plugin plack_middleware => [];
 
 get '/login' => sub {
   my $c = shift;

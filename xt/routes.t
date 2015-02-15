@@ -38,6 +38,12 @@ $r->route('/alternatives4/:foo', foo => [qw(foo foo.bar)]);
 # /optional/*/*
 $r->route('/optional/:foo/:bar')->to(bar => 'test');
 
+# /optional2
+# /optional2/*
+# /optional2/*/*
+$r->route('/optional2/:foo')->to(foo => 'one')->route('/:bar')
+  ->to(bar => 'two');
+
 # /*/test
 my $test = $r->route('/:controller/test')->to(action => 'test');
 
@@ -51,10 +57,10 @@ $r->route('/:controller/testedit')->to(action => 'testedit');
 $test->route('/delete/(id)', id => qr/\d+/)->to(action => 'delete', id => 23);
 
 # /test2
-my $test2 = $r->bridge('/test2/')->to(controller => 'test2');
+my $test2 = $r->route('/test2/')->inline(1)->to(controller => 'test2');
 
 # /test2 (inline)
-my $test4 = $test2->bridge('/')->to(controller => 'index');
+my $test4 = $test2->route('/')->inline(1)->to(controller => 'index');
 
 # /test2/foo
 $test4->route('/foo')->to(controller => 'baz');
@@ -116,10 +122,10 @@ $r->route('/format7', format => [qw(foo foobar)])->to('perl#rocks');
 
 # /articles/1/edit
 # /articles/1/delete
-my $bridge = $r->bridge('/articles/:id')
+my $inline = $r->route('/articles/:id')->inline(1)
   ->to(controller => 'articles', action => 'load', format => 'html');
-$bridge->route('/edit')->to(controller => 'articles', action => 'edit');
-$bridge->route('/delete')
+$inline->route('/edit')->to(controller => 'articles', action => 'edit');
+$inline->route('/delete')
   ->to(controller => 'articles', action => 'delete', format => undef)
   ->name('articles_delete');
 
@@ -180,11 +186,19 @@ $source->route('/second')->to('#second');
 my $third  = $source->route('/third')->to('#third');
 my $target = $r->remove->route('/target')->to('target#');
 my $second = $r->find('second');
-is $second->render('', {}), '/source/second', 'right result';
+is $second->render({}), '/source/second', 'right result';
 $second->remove;
-is $second->render('', {}), '/second', 'right result';
+is $second->render({}), '/second', 'right result';
 $target->add_child($first)->add_child($second);
-is $second->render('', {}), '/target/second', 'right result';
+is $second->render({}), '/target/second', 'right result';
+
+# /websocket
+$r->websocket('/websocket' => {controller => 'ws'})->route('/')
+  ->to(action => 'just')->route->to(works => 1);
+
+# /slash
+$r->route('/slash')->to(controller => 'just')->route('/')
+  ->to(action => 'slash');
 
 # /missing/*/name
 # /missing/too
@@ -199,7 +213,7 @@ $r->route('/partial')->detour('foo#bar');
 
 # GET  /similar/*
 # POST /similar/too
-my $similar = $r->bridge('/similar');
+my $similar = $r->route('/similar')->inline(1);
 $similar->route('/:something')->via('GET')->to('similar#get');
 $similar->route('/too')->via('POST')->to('similar#post');
 
@@ -363,6 +377,30 @@ is $m->path_for(format => 'txt')->{path}, '/optional/23/24.txt', 'right path';
 is $m->path_for('optionalfoobar')->{path}, '/optional/23/24', 'right path';
 is $m->path_for('optionalfoobar', foo => 0)->{path}, '/optional/0/24',
   'right path';
+
+# Optional placeholders in nested routes
+$m = Mojolicious::Routes::Match->new(root => $r);
+$m->match($c => {method => 'GET', path => '/optional2'});
+is_deeply $m->stack, [{foo => 'one', bar => 'two'}], 'right structure';
+is $m->path_for->{path}, '/optional2', 'right path';
+$m = Mojolicious::Routes::Match->new(root => $r);
+$m->match($c => {method => 'GET', path => '/optional2.txt'});
+is_deeply $m->stack, [{foo => 'one', bar => 'two', format => 'txt'}],
+  'right structure';
+is $m->path_for->{path}, '/optional2', 'right path';
+$m = Mojolicious::Routes::Match->new(root => $r);
+$m->match($c => {method => 'GET', path => '/optional2/three'});
+is_deeply $m->stack, [{foo => 'three', bar => 'two'}], 'right structure';
+is $m->path_for->{path}, '/optional2/three', 'right path';
+$m = Mojolicious::Routes::Match->new(root => $r);
+$m->match($c => {method => 'GET', path => '/optional2/three/four'});
+is_deeply $m->stack, [{foo => 'three', bar => 'four'}], 'right structure';
+is $m->path_for->{path}, '/optional2/three/four', 'right path';
+$m = Mojolicious::Routes::Match->new(root => $r);
+$m->match($c => {method => 'GET', path => '/optional2/three/four.txt'});
+is_deeply $m->stack, [{foo => 'three', bar => 'four', format => 'txt'}],
+  'right structure';
+is $m->path_for->{path}, '/optional2/three/four', 'right path';
 
 # Real world example using most features at once
 $m = Mojolicious::Routes::Match->new(root => $r);
@@ -673,7 +711,7 @@ is_deeply $m->stack, [{controller => 'test-test', action => 'test'}],
 is $m->path_for->{path}, '/simple/form', 'right path';
 is $m->path_for('current')->{path}, '/simple/form', 'right path';
 
-# Special edge case with nested bridges (regex)
+# Special edge case with intermediate destinations (regex)
 $m = Mojolicious::Routes::Match->new(root => $r);
 $m->match($c => {method => 'GET', path => '/regex/alternatives/foo'});
 is_deeply $m->stack,
@@ -823,6 +861,26 @@ is $m->path_for->{path}, '/source/third', 'right path';
 $m = Mojolicious::Routes::Match->new(root => $r);
 $m->match($c => {method => 'GET', path => '/target/third'});
 is_deeply $m->stack, [], 'empty stack';
+
+# WebSocket
+$m = Mojolicious::Routes::Match->new(root => $r);
+$m->match($c => {method => 'GET', path => '/websocket'});
+is_deeply $m->stack, [], 'empty stack';
+$m->match($c => {method => 'GET', path => '/websocket', websocket => 1});
+is_deeply $m->stack, [{controller => 'ws', action => 'just', works => 1}],
+  'right structure';
+is $m->path_for->{path}, '/websocket', 'right path';
+ok $m->path_for->{websocket}, 'is a websocket';
+
+# Just a slash with a format after a path
+$m = Mojolicious::Routes::Match->new(root => $r);
+$m->match($c => {method => 'GET', path => '/slash.txt'});
+is_deeply $m->stack,
+  [{controller => 'just', action => 'slash', format => 'txt'}],
+  'right structure';
+is $m->path_for->{path}, '/slash', 'right path';
+ok !$m->path_for->{websocket}, 'not a websocket';
+is $m->path_for(format => 'html')->{path}, '/slash.html', 'right path';
 
 # Nameless placeholder
 $m = Mojolicious::Routes::Match->new(root => $r);

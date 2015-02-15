@@ -1,18 +1,20 @@
 use Mojo::Base -strict;
 
-BEGIN {
-  $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
-}
+BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 
 use Test::More;
+use Mojo::Asset::Memory;
 use Mojo::Date;
 use Mojolicious::Lite;
 use Test::Mojo;
 
-plugin plack_middleware => [];
+get '/hello3.txt' => sub { shift->reply->static('hello2.txt') };
 
-get '/hello3.txt' => sub { shift->render_static('hello2.txt') };
+post '/hello4.txt' => sub {
+  my $c = shift;
+  $c->res->headers->content_type('text/html');
+  $c->reply->static('hello2.txt');
+};
 
 options '/hello.txt' => sub { shift->render(text => 'Options!') };
 
@@ -21,6 +23,12 @@ get '/etag' => sub {
   $c->is_fresh(etag => 'abc')
     ? $c->rendered(304)
     : $c->render(text => 'I ♥ Mojolicious!');
+};
+
+get '/asset' => sub {
+  my $c   = shift;
+  my $mem = Mojo::Asset::Memory->new->add_chunk('I <3 Assets!');
+  $c->reply->asset($mem);
 };
 
 my $t = Test::Mojo->new;
@@ -65,6 +73,10 @@ $t->options_ok('/hello.txt')->status_is(200)
   ->header_is(Server           => 'Mojolicious (Perl)')
   ->header_is('Content-Length' => 8)->content_is('Options!');
 
+# Unknown method
+$t->put_ok('/hello.txt')->status_is(404)
+  ->header_is(Server => 'Mojolicious (Perl)');
+
 # Partial static file
 $t->get_ok('/hello.txt' => {Range => 'bytes=2-8'})->status_is(206)
   ->header_is(Server          => 'Mojolicious (Perl)')
@@ -102,7 +114,14 @@ $t->get_ok('/hello.txt' => {Range => 'bytes=0-0'})->status_is(206)
   ->header_is('Content-Range' => 'bytes 0-0/31')->content_is('H');
 
 # Partial static file, end outside of range
-$t->get_ok('/hello.txt' => {Range => 'bytes=25-35'})->status_is(206)
+$t->get_ok('/hello.txt' => {Range => 'bytes=25-31'})->status_is(206)
+  ->header_is(Server           => 'Mojolicious (Perl)')
+  ->header_is('Content-Length' => 6)
+  ->header_is('Content-Range'  => 'bytes 25-30/31')
+  ->header_is('Accept-Ranges'  => 'bytes')->content_is("file!\n");
+
+# Partial static file, end way outside of range
+$t->get_ok('/hello.txt' => {Range => 'bytes=25-300'})->status_is(206)
   ->header_is(Server           => 'Mojolicious (Perl)')
   ->header_is('Content-Length' => 6)
   ->header_is('Content-Range'  => 'bytes 25-30/31')
@@ -125,14 +144,32 @@ $t->get_ok('/hello3.txt' => {Range => 'bytes=0-0'})->status_is(206)
   ->header_is('Accept-Ranges' => 'bytes')->header_is('Content-Length' => 1)
   ->header_is('Content-Range' => 'bytes 0-0/1')->content_is('X');
 
+# Render static file with custom content type
+$t->post_ok('/hello4.txt')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')->content_type_is('text/html')
+  ->header_is('Content-Length' => 1)->content_is('X');
+
 # Fresh content
 $t->get_ok('/etag')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
   ->header_is(ETag => '"abc"')->content_is('I ♥ Mojolicious!');
 
 # Stale content
-$t->get_ok('/etag' => {'If-None-Match' => '"abc"'})
+$t->get_ok('/etag' => {'If-None-Match' => '"abc"'})->status_is(304)
   ->header_is(Server => 'Mojolicious (Perl)')->header_is(ETag => '"abc"')
-  ->status_is(304)->content_is('');
+  ->content_is('');
+
+# Fresh asset
+$t->get_ok('/asset')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')->content_is('I <3 Assets!');
+my $etag = $t->tx->res->headers->etag;
+
+# Stale asset
+$t->get_ok('/asset' => {'If-None-Match' => $etag})->status_is(304)
+  ->header_is(Server => 'Mojolicious (Perl)')->content_is('');
+
+# Partial asset
+$t->get_ok('/asset' => {'Range' => 'bytes=3-5'})->status_is(206)
+  ->header_is(Server => 'Mojolicious (Perl)')->content_is('3 A');
 
 # Empty file
 $t->get_ok('/hello4.txt')->status_is(200)
@@ -143,6 +180,9 @@ $t->get_ok('/hello4.txt')->status_is(200)
 $t->get_ok('/hello4.txt' => {Range => 'bytes=0-0'})->status_is(416)
   ->header_is(Server          => 'Mojolicious (Perl)')
   ->header_is('Accept-Ranges' => 'bytes')->content_is('');
+
+# Hidden inline file
+$t->get_ok('/hidden')->status_is(404)->content_unlike(qr/Unreachable file/);
 
 # Base64 static inline file, If-Modified-Since
 my $modified = Mojo::Date->new->epoch(time - 3600);
@@ -182,5 +222,8 @@ $t->get_ok('/static.txt' => {Range => 'bytes=45-50'})->status_is(416)
 done_testing();
 
 __DATA__
+@@ hidden
+Unreachable file.
+
 @@ static.txt (base64)
 dGVzdCAxMjMKbGFsYWxh

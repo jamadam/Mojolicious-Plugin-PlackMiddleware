@@ -2,7 +2,6 @@ use Mojo::Base -strict;
 
 BEGIN {
   $ENV{MOJO_MODE}    = 'production';
-  $ENV{MOJO_NO_IPV6} = 1;
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
@@ -33,6 +32,7 @@ is_deeply $t->app->commands->namespaces,
 is $t->app, $t->app->commands->app, 'applications are equal';
 is $t->app->static->file('hello.txt')->slurp,
   "Hello Mojo from a static file!\n", 'right content';
+is $t->app->static->file('does_not_exist.html'), undef, 'no file';
 is $t->app->moniker, 'mojolicious_test', 'right moniker';
 
 # Default namespaces
@@ -97,6 +97,12 @@ $t->get_ok('/foo/baz')->status_is(404)
 # Try to access a file which is not under the web root via path
 # traversal in production mode
 $t->get_ok('/../../mojolicious/secret.txt')->status_is(404)
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->content_like(qr/Page not found/);
+
+# Try to access a file which is not under the web root via path
+# traversal in production mode (triple dot)
+$t->get_ok('/.../mojolicious/secret.txt')->status_is(404)
   ->header_is(Server => 'Mojolicious (Perl)')
   ->content_like(qr/Page not found/);
 

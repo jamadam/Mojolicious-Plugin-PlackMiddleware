@@ -18,8 +18,6 @@ hook around_dispatch => sub {
   Mojo::IOLoop->next_tick(sub { $next->() });
 };
 
-plugin plack_middleware => [];
-
 get '/' => sub {
   my $c = shift;
   $c->render(

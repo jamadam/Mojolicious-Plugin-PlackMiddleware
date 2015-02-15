@@ -2,7 +2,6 @@ use Mojo::Base -strict;
 
 BEGIN {
   $ENV{MOJO_MODE}    = 'development';
-  $ENV{MOJO_NO_IPV6} = 1;
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
@@ -25,7 +24,7 @@ app->defaults(default => 23);
 my $log = '';
 my $cb = app->log->on(message => sub { $log .= pop });
 is app->secrets->[0], app->moniker, 'secret defaults to moniker';
-like $log, qr/Your secret passphrase needs to be changed!!!/, 'right message';
+like $log, qr/Your secret passphrase needs to be changed/, 'right message';
 app->log->unsubscribe(message => $cb);
 
 # Test helpers
@@ -49,8 +48,6 @@ app->renderer->add_handler(dead => sub { die 'renderer works!' });
 
 # UTF-8 text
 app->types->type(txt => 'text/plain;charset=UTF-8');
-
-plugin plack_middleware => [];
 
 # Rewrite when rendering to string
 hook before_render => sub {
@@ -83,6 +80,9 @@ get '/alternatives/:char' => [char => [qw(☃ ♥)]] => sub {
 get '/optional/:middle/placeholder' =>
   {middle => 'none', inline => '<%= $middle %>-<%= url_for =%>'};
 
+get '/optional/:param' =>
+  {param => undef, inline => '%= param("param") // "undef"'};
+
 get '/alterformat' => [format => ['json']] => {format => 'json'} => sub {
   my $c = shift;
   $c->render(text => $c->stash('format'));
@@ -99,8 +99,8 @@ any sub { shift->render(text => 'Bye!') };
 
 post '/multipart/form' => sub {
   my $c    = shift;
-  my @test = $c->param('test');
-  $c->render(text => join "\n", @test);
+  my $test = $c->every_param('test');
+  $c->render(text => join "\n", @$test);
 };
 
 get '/auto_name' => sub {
@@ -205,8 +205,9 @@ get '/root' => sub { shift->render(text => 'root fallback!') };
 get '/template.txt' => {template => 'template', format => 'txt'};
 
 get ':number' => [number => qr/0/] => sub {
-  my $c       = shift;
-  my $url     = $c->req->url->to_abs;
+  my $c   = shift;
+  my $url = $c->req->url->to_abs;
+  $c->res->headers->header('X-Original' => $c->tx->original_remote_address);
   my $address = $c->tx->remote_address;
   my $num     = $c->param('number');
   $c->render(text => "$url-$address-$num");
@@ -239,7 +240,7 @@ get '/source' => sub {
   my $c = shift;
   my $file = $c->param('fail') ? 'does_not_exist.txt' : '../lite_app.t';
   $c->render_maybe('this_does_not_ever_exist')
-    or $c->render_static($file)
+    or $c->reply->static($file)
     or $c->res->headers->header('X-Missing' => 1);
 };
 
@@ -377,23 +378,13 @@ get '/subrequest_non_blocking' => sub {
   $c->stash->{nb} = 'success!';
 };
 
-get '/redirect_url' => sub {
-  shift->redirect_to('http://127.0.0.1/foo')->render(text => 'Redirecting!');
-};
+get '/redirect_url' => sub { shift->redirect_to('http://127.0.0.1/foo') };
 
-get '/redirect_path' => sub {
-  shift->redirect_to('/foo/bar?foo=bar')->render(text => 'Redirecting!');
-};
+get '/redirect_path' => sub { shift->redirect_to('/foo/bar?foo=bar') };
 
-get '/redirect_named' => sub {
-  shift->redirect_to('index', format => 'txt')->render(text => 'Redirecting!');
-};
+get '/redirect_named' => sub { shift->redirect_to('index', format => 'txt') };
 
 get '/redirect_twice' => sub { shift->redirect_to('/redirect_named') };
-
-get '/redirect_no_render' => sub {
-  shift->redirect_to('index', {format => 'txt'});
-};
 
 get '/redirect_callback' => sub {
   my $c = shift;
@@ -406,7 +397,7 @@ get '/redirect_callback' => sub {
   );
 };
 
-get '/static_render' => sub { shift->render_static('hello.txt') };
+get '/static' => sub { shift->reply->static('hello.txt') };
 
 app->types->type('koi8-r' => 'text/html; charset=koi8-r');
 get '/koi8-r' => sub {
@@ -491,11 +482,7 @@ $t->get_ok('/☃')->status_is(200)
 
 # Umlaut
 $t->get_ok('/uni/aäb')->status_is(200)->content_is('/uni/a%C3%A4b');
-
-# Escaped umlaut
 $t->get_ok('/uni/a%E4b')->status_is(200)->content_is('/uni/a%C3%A4b');
-
-# Escaped umlaut again
 $t->get_ok('/uni/a%C3%A4b')->status_is(200)->content_is('/uni/a%C3%A4b');
 
 # Captured snowman
@@ -537,21 +524,13 @@ $t->post_ok('/')->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
 $t->get_ok('/alternatives/☃')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
   ->content_is('/alternatives/%E2%98%83');
-
-# Different unicode alternative
 $t->get_ok('/alternatives/♥')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
   ->content_is('/alternatives/%E2%99%A5');
-
-# Invalid alternative
 $t->get_ok('/alternatives/☃23')->status_is(404)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is("Oops!\n");
-
-# Invalid alternative
 $t->get_ok('/alternatives')->status_is(404)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is("Oops!\n");
-
-# Invalid alternative
 $t->get_ok('/alternatives/test')->status_is(404)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is("Oops!\n");
 
@@ -559,29 +538,29 @@ $t->get_ok('/alternatives/test')->status_is(404)
 $t->get_ok('/optional/test/placeholder')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
   ->content_is('test-/optional/test/placeholder');
-
-# Optional placeholder in the middle without value
 $t->get_ok('/optional/placeholder')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
   ->content_is('none-/optional/none/placeholder');
 
+# Optional placeholder
+$t->get_ok('/optional')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')->content_is("undef\n");
+$t->get_ok('/optional/test')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')->content_is("test\n");
+$t->get_ok('/optional?param=test')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')->content_is("undef\n");
+
 # No format
 $t->get_ok('/alterformat')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is('json');
-
-# Format alternative
 $t->get_ok('/alterformat.json')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is('json');
-
-# Invalid format alternative
 $t->get_ok('/alterformat.html')->status_is(404)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is("Oops!\n");
 
 # No format
 $t->get_ok('/noformat')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is('xml/noformat');
-
-# Invalid format
 $t->get_ok('/noformat.xml')->status_is(404)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is("Oops!\n");
 
@@ -610,17 +589,15 @@ $t->get_ok('/multi/B?foo=A&baz=C')->status_is(200)
 # Injection attack
 $t->get_ok('/multi/B?foo=A&foo=E&baz=C&yada=D&yada=text&yada=fail')
   ->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
-  ->content_is('ABC');
+  ->content_is('EBC');
 
 # Missing parameter
 $t->get_ok('/multi/B?baz=C')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is('BC');
 
-# Reserved stash value
+# Reserved stash values
 $t->get_ok('/reserved?data=just-works')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')->content_is('just-worksdata');
-
-# More reserved stash values
 $t->get_ok('/reserved?data=just-works&json=test')->status_is(200)
   ->header_is(Server => 'Mojolicious (Perl)')
   ->content_is('just-worksdata,json');
@@ -697,16 +674,13 @@ $t->get_ok('/regex/in/template')->status_is(200)
   ->content_is("test(test)(\\Qtest\\E)(\n");
 
 # Chunked response with basic auth
-my $url = $t->ua->server->url->userinfo('sri:foo')->path('/stream')
-  ->query(foo => 'bar');
-$t->get_ok($url)->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
-  ->content_like(qr!^foobarsri:foohttp://localhost:\d+/stream$!);
-
-# Not ajax
-$t->get_ok('/maybe/ajax')->status_is(200)
-  ->header_is(Server => 'Mojolicious (Perl)')->content_is('not ajax');
+$t->get_ok('//sri:foo@/stream' => form => {foo => 'bar'})->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->content_like(qr!^foobarsri:foohttp://127\.0\.0\.1:\d+/stream$!);
 
 # Ajax
+$t->get_ok('/maybe/ajax')->status_is(200)
+  ->header_is(Server => 'Mojolicious (Perl)')->content_is('not ajax');
 $t->get_ok('/maybe/ajax' => {'X-Requested-With' => 'XMLHttpRequest'})
   ->status_is(200)->header_is(Server => 'Mojolicious (Perl)')
   ->content_is('is ajax');
@@ -743,7 +717,8 @@ $t->get_ok('/.html')->status_is(200)
   local $ENV{MOJO_REVERSE_PROXY} = 1;
   $t->ua->server->restart;
   $t->get_ok('/0' => {'X-Forwarded-For' => '192.0.2.2, 192.0.2.1'})
-    ->status_is(200)->content_like(qr!http://localhost:\d+/0-192\.0\.2\.1-0$!);
+    ->status_is(200)->header_unlike('X-Original' => qr/192\.0\.2\.1/)
+    ->content_like(qr!http://127\.0\.0\.1:\d+/0-192\.0\.2\.1-0$!);
 }
 
 # Reverse proxy with "X-Forwarded-Proto"
@@ -751,19 +726,19 @@ $t->get_ok('/.html')->status_is(200)
   local $ENV{MOJO_REVERSE_PROXY} = 1;
   $t->ua->server->restart;
   $t->get_ok('/0' => {'X-Forwarded-Proto' => 'https'})->status_is(200)
-    ->content_like(qr!^https://localhost:\d+/0-!)->content_like(qr/-0$/)
+    ->content_like(qr!^https://127\.0\.0\.1:\d+/0-!)->content_like(qr/-0$/)
     ->content_unlike(qr!-192\.0\.2\.1-0$!);
 }
 
 # "X-Forwarded-For"
 $t->ua->server->restart;
 $t->get_ok('/0' => {'X-Forwarded-For' => '192.0.2.2, 192.0.2.1'})
-  ->status_is(200)->content_like(qr!^http://localhost:\d+/0-!)
+  ->status_is(200)->content_like(qr!^http://127\.0\.0\.1:\d+/0-!)
   ->content_like(qr/-0$/)->content_unlike(qr!-192\.0\.2\.1-0$!);
 
 # "X-Forwarded-Proto"
 $t->get_ok('/0' => {'X-Forwarded-Proto' => 'https'})->status_is(200)
-  ->content_like(qr!^http://localhost:\d+/0-!)->content_like(qr/-0$/)
+  ->content_like(qr!^http://127\.0\.0\.1:\d+/0-!)->content_like(qr/-0$/)
   ->content_unlike(qr!-192\.0\.2\.1-0$!);
 
 # Inline "epl" template
@@ -792,21 +767,21 @@ $log = '';
 $cb = $t->app->log->on(message => sub { $log .= pop });
 $t->get_ok('/source?fail=1')->status_is(404)->header_is('X-Missing' => 1)
   ->content_is("Oops!\n");
-like $log, qr/File "does_not_exist.txt" not found, public directory missing\?/,
-  'right message';
+like $log, qr/Static file "does_not_exist.txt" not found/, 'right message';
 $t->app->log->unsubscribe(message => $cb);
 
 # With body and max message size
 {
   local $ENV{MOJO_MAX_MESSAGE_SIZE} = 1024;
-  $t->get_ok('/', '1234' x 1024)->status_is(413)
+  $t->get_ok('/', '1234' x 1024)->status_is(200)
     ->header_is(Connection => 'close')
-    ->content_is(
-    "/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
+    ->content_is("Maximum message size exceeded\n"
+      . "/root.html\n/root.html\n/root.html\n/root.html\n/root.html\n");
 }
 
 # Relaxed placeholder
 $t->get_ok('/foo_relaxed/123')->status_is(200)->content_is('1230');
+$t->get_ok('/foo_relaxed/123.html')->status_is(200)->content_is('123.html0');
 $t->get_ok('/foo_relaxed/123' => {DNT => 1})->status_is(200)
   ->content_is('1231');
 $t->get_ok('/foo_relaxed/')->status_is(404);
@@ -822,19 +797,13 @@ $t->get_ok('/foo_wildcard_too/')->status_is(404);
 $t->get_ok('/with/header/condition',
   {'X-Secret-Header' => 'bar', 'X-Another-Header' => 'baz'})->status_is(200)
   ->content_is("Test ok!\n");
-
-# Missing headers
 $t->get_ok('/with/header/condition')->status_is(404)->content_like(qr/Oops!/);
-
-# Missing header
 $t->get_ok('/with/header/condition' => {'X-Secret-Header' => 'bar'})
   ->status_is(404)->content_like(qr/Oops!/);
 
 # Single header condition
 $t->post_ok('/with/header/condition' => {'X-Secret-Header' => 'bar'} => 'bar')
   ->status_is(200)->content_is('foo bar');
-
-# Missing header
 $t->post_ok('/with/header/condition' => {} => 'bar')->status_is(404)
   ->content_like(qr/Oops!/);
 
@@ -975,22 +944,18 @@ is $nb, 'broken!', 'right text';
 
 # Redirect to URL
 $t->get_ok('/redirect_url')->status_is(302)
-  ->header_is(Server           => 'Mojolicious (Perl)')
-  ->header_is('Content-Length' => 12)
-  ->header_is(Location => 'http://127.0.0.1/foo')->content_is('Redirecting!');
+  ->header_is(Server   => 'Mojolicious (Perl)')
+  ->header_is(Location => 'http://127.0.0.1/foo')->content_is('');
 
 # Redirect to path
 $t->get_ok('/redirect_path')->status_is(302)
-  ->header_is(Server           => 'Mojolicious (Perl)')
-  ->header_is('Content-Length' => 12)
-  ->header_like(Location => qr!/foo/bar\?foo=bar$!)
-  ->content_is('Redirecting!');
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->header_like(Location => qr!/foo/bar\?foo=bar$!)->content_is('');
 
 # Redirect to named route
 $t->get_ok('/redirect_named')->status_is(302)
-  ->header_is(Server           => 'Mojolicious (Perl)')
-  ->header_is('Content-Length' => 12)
-  ->header_like(Location => qr!/template.txt$!)->content_is('Redirecting!');
+  ->header_is(Server => 'Mojolicious (Perl)')
+  ->header_like(Location => qr!/template.txt$!)->content_is('');
 
 # Redirect twice
 $t->ua->max_redirects(3);
@@ -1003,12 +968,6 @@ is $redirects->[0]->req->url->path, '/redirect_twice', 'right path';
 is $redirects->[1]->req->url->path, '/redirect_named', 'right path';
 $t->ua->max_redirects(0);
 
-# Redirect without rendering
-$t->get_ok('/redirect_no_render')->status_is(302)
-  ->header_is(Server           => 'Mojolicious (Perl)')
-  ->header_is('Content-Length' => 0)
-  ->header_like(Location => qr!/template.txt$!)->content_is('');
-
 # Non-blocking redirect
 $t->get_ok('/redirect_callback')->status_is(301)
   ->header_is(Server           => 'Mojolicious (Perl)')
@@ -1016,7 +975,7 @@ $t->get_ok('/redirect_callback')->status_is(301)
   ->header_is(Location => 'http://127.0.0.1/foo')->content_is('Whatever!');
 
 # Static file
-$t->get_ok('/static_render')->status_is(200)
+$t->get_ok('/static')->status_is(200)
   ->header_is(Server           => 'Mojolicious (Perl)')
   ->header_is('Content-Length' => 31)
   ->content_is("Hello Mojo from a static file!\n");
@@ -1032,7 +991,7 @@ $t->get_ok('/redirect_named')->status_is(200)
 $t->ua->max_redirects(0);
 Test::Mojo->new->tx($t->tx->previous)->status_is(302)
   ->header_is(Server => 'Mojolicious (Perl)')
-  ->header_like(Location => qr!/template.txt$!)->content_is('Redirecting!');
+  ->header_like(Location => qr!/template.txt$!)->content_is('');
 
 # Request with koi8-r content
 my $koi8
@@ -1081,7 +1040,7 @@ http://mojolicio.us/test?foo=23&bar=24&baz=25
 /bar/23?bar=24&baz=25&foo=yada
 EOF
 $t->get_ok('/url_with/foo?foo=bar')->status_is(200)
-  ->content_like(qr!http://localhost:\d+/url_with/bar\?foo\=bar!);
+  ->content_like(qr!http://127\.0\.0\.1:\d+/url_with/bar\?foo\=bar!);
 
 # Dynamic inline template
 $t->get_ok('/dynamic/inline')->status_is(200)
@@ -1124,6 +1083,7 @@ Test ok!
 
 @@ root.html.epl
 % my $c = shift;
+<% if (my $err = $c->req->error) { =%><%= "$err->{message}\n" %><% } =%>
 %== $c->url_for('root_path')
 %== $c->url_for('root_path')
 %== $c->url_for('root_path')

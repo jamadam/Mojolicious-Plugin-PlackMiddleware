@@ -2,7 +2,6 @@ use Mojo::Base -strict;
 
 BEGIN {
   $ENV{MOJO_MODE}    = 'development';
-  $ENV{MOJO_NO_IPV6} = 1;
   $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
 }
 
@@ -18,8 +17,6 @@ app->log->handle(undef);
 app->log->level($ENV{MOJO_LOG_LEVEL} = 'debug');
 my $log = '';
 app->log->on(message => sub { shift; $log .= join ':', @_ });
-
-plugin plack_middleware => [];
 
 helper dead_helper => sub { die "dead helper!\n" };
 
@@ -244,7 +241,7 @@ ok !$snapshot->{exception}, 'no exception in snapshot';
 # Bundled static files
 $t->get_ok('/mojo/jquery/jquery.js')->status_is(200)
   ->content_type_is('application/javascript');
-$t->get_ok('/mojo/prettify/prettify.js')->status_is(200)
+$t->get_ok('/mojo/prettify/run_prettify.js')->status_is(200)
   ->content_type_is('application/javascript');
 $t->get_ok('/mojo/prettify/prettify-mojo-dark.css')->status_is(200)
   ->content_type_is('text/css');

@@ -1,9 +1,6 @@
 use Mojo::Base -strict;
 
-BEGIN {
-  $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
-}
+BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 
 use Test::More;
 
@@ -24,8 +21,6 @@ hook after_render => sub {
   return unless $c->stash->{reverse};
   $$output = reverse $$output . $format;
 };
-
-plugin plack_middleware => [];
 
 # Default layout for whole application
 app->defaults(layout => 'default');

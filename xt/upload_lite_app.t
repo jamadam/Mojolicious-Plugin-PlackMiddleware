@@ -1,9 +1,6 @@
 use Mojo::Base -strict;
 
-BEGIN {
-  $ENV{MOJO_NO_IPV6} = 1;
-  $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll';
-}
+BEGIN { $ENV{MOJO_REACTOR} = 'Mojo::Reactor::Poll' }
 
 use Test::More;
 use Mojo::Asset::File;
@@ -11,8 +8,6 @@ use Mojo::Content::MultiPart;
 use Mojo::Content::Single;
 use Mojolicious::Lite;
 use Test::Mojo;
-
-plugin plack_middleware => [];
 
 post '/upload' => sub {
   my $c       = shift;
@@ -28,7 +23,7 @@ post '/upload' => sub {
 
 post '/multi' => sub {
   my $c = shift;
-  my @uploads = map { $c->param($_) } $c->param('name');
+  my @uploads = map { @{$c->every_param($_)} } @{$c->every_param('name')};
   $c->render(text => join '', map { $_->filename, $_->asset->slurp } @uploads);
 };
 
