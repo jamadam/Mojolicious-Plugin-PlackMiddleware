@@ -18,7 +18,7 @@ use Test::More tests => 16;
     my $t = Test::Mojo->new('SomeApp');
     $t->get_ok('/hash')
         ->status_is(200)
-        ->header_is('Content-Type', 'application/json')
+        ->header_is('Content-Type', 'application/json;charset=UTF-8')
         ->content_is(q({"foo":"bar"}));
     $t->get_ok('/hash?json.p=foo')
         ->status_is(200)
@@ -26,7 +26,7 @@ use Test::More tests => 16;
         ->content_is(q(/**/foo({"foo":"bar"})));
     $t->get_ok('/array')
         ->status_is(200)
-        ->header_is('Content-Type', 'application/json')
+        ->header_is('Content-Type', 'application/json;charset=UTF-8')
         ->content_is(q(["hoo","bar"]));
     $t->get_ok('/array?json.p=foo')
         ->status_is(200)
