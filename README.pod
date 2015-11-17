@@ -51,7 +51,7 @@ app covers pre/post process too.
 
 It also aimed at those who used to Mojolicious bundle servers.
 Note that if you can run your application on a plack server, there is proper
-ways to use middlewares. See L<http://blog.kraih.com/mojolicious-and-plack>.
+ways to use middlewares. See L<http://mojolicio.us/perldoc/Mojolicious/Guides/Cookbook#Plack-middleware>.
 
 =head2 OPTIONS
 
