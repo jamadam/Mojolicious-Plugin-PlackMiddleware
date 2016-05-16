@@ -13,6 +13,9 @@ BEGIN {
 
 use Test::More tests => 56;
 
+use File::Basename 'dirname';
+local $ENV{MOJO_HOME} = dirname(__FILE__);
+
 {
     $ENV{MOJO_MODE} = 'production';
     my $t = Test::Mojo->new('SomeApp');

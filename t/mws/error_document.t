@@ -4,6 +4,7 @@ use warnings;
 use Test::More;
 use Test::Mojo;
 use utf8;
+use FindBin;
 
 BEGIN {
     $ENV{MOJO_NO_BONJOUR} = $ENV{MOJO_NO_IPV6} = 1;
