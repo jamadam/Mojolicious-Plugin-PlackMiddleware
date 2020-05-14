@@ -223,7 +223,8 @@ use Mojo::Base -base;
     }
     
     sub print {
-        shift->handler->(shift);
+        my ($self, $error) = @_;
+        $self->handler->($error);
     }
 
 ### ---
