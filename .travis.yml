@@ -6,7 +6,6 @@ perl:
   - '5.20'
   - '5.22'
   - '5.30'
-  - '5.32'
 branches:
   only:
     - master
