@@ -5,22 +5,22 @@ use Mojo::Base 'Mojolicious::Plugin';
 use Plack::Util;
 use Mojo::Message::Request;
 use Mojo::Message::Response;
-our $VERSION = '0.39';
+our $VERSION = '0.40';
 use Scalar::Util 'weaken';
-    
+
     ### ---
     ### register
     ### ---
     sub register {
         my ($self, $app, $mws) = @_;
-        
+
         my $plack_app = sub {
             my $env = shift;
             my $c = $env->{'mojo.c'};
             my $tx = $c->tx;
-            
+
             $tx->req(psgi_env_to_mojo_req($env));
-            
+
             if ($env->{'mojo.routed'}) {
                 my $stash = $c->stash;
                 for my $key (grep {$_ =~ qr{^mojo\.}} keys %{$stash}) {
@@ -36,10 +36,10 @@ use Scalar::Util 'weaken';
                 $env->{'mojo.inside_app'}->();
                 $env->{'mojo.routed'} = 1;
             }
-            
+
             return mojo_res_to_psgi_res($tx->res);
         };
-            
+
         my @mws = reverse @$mws;
         while (scalar @mws) {
             my $args = (ref $mws[0] eq 'HASH') ? shift @mws : undef;
@@ -51,12 +51,12 @@ use Scalar::Util 'weaken';
                 builder => sub {$e->wrap($_[0], %$args)},
             );
         }
-        
+
         $app->hook('around_dispatch' => sub {
             my ($next, $c) = @_;
-            
+
             return $next->() if ($c->tx->req->error);
-            
+
             my $plack_env = mojo_req_to_psgi_env($c->req);
             $plack_env->{'mojo.c'} = $c;
             $plack_env->{'mojo.inside_app'} = $next;
@@ -64,27 +64,27 @@ use Scalar::Util 'weaken';
                 Mojolicious::Plugin::PlackMiddleware::_EH->new(sub {
                     $c->app->log->debug(shift);
                 });
-            
+
             $c->tx->res(psgi_res_to_mojo_res($plack_app->($plack_env)));
             $c->rendered if (! $plack_env->{'mojo.routed'});
         });
     }
-    
+
     ### ---
     ### chunk size
     ### ---
     use constant CHUNK_SIZE => $ENV{MOJO_CHUNK_SIZE} || 131072;
-    
+
     ### ---
     ### convert psgi env to mojo req
     ### ---
     sub psgi_env_to_mojo_req {
-        
+
         my $env = shift;
         my $req = Mojo::Message::Request->new->parse($env);
-        
+
         $req->reverse_proxy($env->{MOJO_REVERSE_PROXY});
-        
+
         # Request body
         my $len = $env->{CONTENT_LENGTH};
         while (!$req->is_finished) {
@@ -95,32 +95,32 @@ use Scalar::Util 'weaken';
             $len -= $read;
             last if $len <= 0;
         }
-        
+
         return $req;
     }
-    
+
     ### ---
     ### convert mojo tx to psgi env
     ### ---
     sub mojo_req_to_psgi_env {
-        
+
         my $mojo_req = shift;
         my $url = $mojo_req->url;
         my $base = $url->base;
         my $body =
         Mojolicious::Plugin::PlackMiddleware::_PSGIInput->new($mojo_req->build_body);
-        
+
         my %headers_org = %{$mojo_req->headers->to_hash};
         my %headers;
         for my $key (keys %headers_org) {
-            
+
             my $value = $headers_org{$key};
             $key =~ s{-}{_}g;
             $key = uc $key;
             $key = "HTTP_$key" if ($key !~ /^(?:CONTENT_LENGTH|CONTENT_TYPE)$/);
             $headers{$key} = $value;
         }
-        
+
         return {
             %ENV,
             %headers,
@@ -143,7 +143,7 @@ use Scalar::Util 'weaken';
             'psgi.nonblocking'  => Plack::Util::FALSE,
         };
     }
-    
+
     ### ---
     ### convert psgi res to mojo res
     ### ---
@@ -155,15 +155,15 @@ use Scalar::Util 'weaken';
         while (scalar @{$psgi_res->[1]}) {
             $headers->add(shift @{$psgi_res->[1]} => shift @{$psgi_res->[1]});
         }
-        
+
         $headers->remove('Content-Length'); # should be set by mojolicious later
-        
+
         my $asset = $mojo_res->content->asset;
         Plack::Util::foreach($psgi_res->[2], sub {$asset->add_chunk($_[0])});
         weaken($psgi_res);
         return $mojo_res;
     }
-    
+
     ### ---
     ### convert mojo res to psgi res
     ### ---
@@ -175,25 +175,25 @@ use Scalar::Util 'weaken';
         push @headers, $_ => $headers->header($_) for (@{$headers->names});
         my @body;
         my $offset = 0;
-        
+
         # don't know why but this block makes long polling tests to pass
         if ($mojo_res->content->is_dynamic && $mojo_res->content->{delay}) {
             $mojo_res->get_body_chunk(0);
         }
-        
+
         while (length(my $chunk = $mojo_res->get_body_chunk($offset))) {
             push(@body, $chunk);
             $offset += length $chunk;
         }
         return [$status, \@headers, \@body];
     }
-    
+
     ### ---
     ### load mw class
     ### ---
     sub _load_class {
         my($class, $prefix) = @_;
-        
+
         if ($prefix) {
             unless ($class =~ s/^\+// || $class =~ /^$prefix/) {
                 $class = "$prefix\::$class";
@@ -205,7 +205,7 @@ use Scalar::Util 'weaken';
         my $file = $class;
         $file =~ s!::!/!g;
         require "$file.pm"; ## no critic
-    
+
         return $class;
     }
 
@@ -215,15 +215,15 @@ use Scalar::Util 'weaken';
 ### ---
 package Mojolicious::Plugin::PlackMiddleware::_EH;
 use Mojo::Base -base;
-    
+
     __PACKAGE__->attr('handler');
-    
+
     sub new {
         my ($class, $handler) = @_;
         my $self = $class->SUPER::new;
         $self->handler($handler);
     }
-    
+
     sub print {
         my ($self, $error) = @_;
         $self->handler->($error);
@@ -236,7 +236,7 @@ package Mojolicious::Plugin::PlackMiddleware::_Cond;
 use strict;
 use warnings;
 use parent qw(Plack::Middleware::Conditional);
-    
+
     sub call {
         my($self, $env) = @_;
         my $cond = $self->condition;
@@ -246,19 +246,19 @@ use parent qw(Plack::Middleware::Conditional);
             return $self->app->($env);
         }
     }
-    
+
 ### ---
 ### PSGI Input handler
 ### ---
 package Mojolicious::Plugin::PlackMiddleware::_PSGIInput;
 use strict;
 use warnings;
-    
+
     sub new {
         my ($class, $content) = @_;
         return bless [$content, 0, length($content)], $class;
     }
-    
+
     sub read {
         my $self = shift;
         my $offset = ($_[2] || $self->[1]);
@@ -281,44 +281,44 @@ Mojolicious::Plugin::PlackMiddleware - Plack::Middleware inside Mojolicious
 =head1 SYNOPSIS
 
     # Mojolicious
-    
+
     sub startup {
         my $self = shift;
-        
+
         $self->plugin(plack_middleware => [
-            'MyMiddleware1', 
+            'MyMiddleware1',
             'MyMiddleware2', {arg1 => 'some_vale'},
-            'MyMiddleware3', $condition_code_ref, 
+            'MyMiddleware3', $condition_code_ref,
             'MyMiddleware4', $condition_code_ref, {arg1 => 'some_value'}
         ]);
     }
-    
+
     # Mojolicious::Lite
-    
+
     plugin plack_middleware => [
-        'MyMiddleware1', 
+        'MyMiddleware1',
         'MyMiddleware2', {arg1 => 'some_vale'},
-        'MyMiddleware3', $condition_code_ref, 
+        'MyMiddleware3', $condition_code_ref,
         'MyMiddleware4', $condition_code_ref, {arg1 => 'some_value'}
     ];
-    
+
     package Plack::Middleware::MyMiddleware1;
     use strict;
     use warnings;
     use base qw( Plack::Middleware );
-    
+
     sub call {
         my($self, $env) = @_;
-        
+
         # pre-processing $env
-        
+
         my $res = $self->app->($env);
-        
+
         # post-processing $res
-        
+
         return $res;
     }
-  
+
 =head1 DESCRIPTION
 
 Mojolicious::Plugin::PlackMiddleware allows you to enable Plack::Middleware
